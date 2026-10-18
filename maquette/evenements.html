@@ -1,0 +1,46 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GTQC Événements</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Événements ouverts à la communauté GTQC : rallyes, défis et courses spéciales, les dimanches sans course de la ligue.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<header class="topbar solid" id="topbar">
+  <a class="brand" href="index.html" aria-label="GTQC, accueil"><img id="logo" alt="GTQC"></a>
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="index.html">Courses</a>
+    <a href="pilotes.html">Pilotes</a>
+    <a href="evenements.html" aria-current="page">Événements</a>
+    <a href="reglements.html">Règlements</a>
+    <a href="tv.html">GTQC TV</a>
+    <a href="rejoindre.html">Rejoindre</a>
+  </nav>
+  <button class="menu-btn" type="button" aria-label="Menu"><span aria-hidden="true">≡</span> Menu</button>
+</header>
+
+<main class="ev-page">
+  <section class="ev-hero" id="hero" aria-label="Prochain événement"></section>
+  <div class="ev-body">
+    <div class="ev-intro">
+      <h1 class="dp-title">Événements</h1>
+      <p class="rp-intro">Les dimanches sans course de la ligue, la GTQC organise des événements ouverts à toute la communauté : rallyes, défis, courses thématiques. Pas besoin d'être pilote de la ligue pour y participer.</p>
+    </div>
+    <section aria-labelledby="hAvenir"><h2 class="ev-h" id="hAvenir">À venir</h2><ol class="ev-list" id="avenir"></ol></section>
+    <section aria-labelledby="hPasses"><h2 class="ev-h" id="hPasses">Passés</h2><ol class="ev-list past" id="passes"></ol></section>
+  </div>
+</main>
+
+<section class="partners" aria-label="Partenaires"><div class="partner-row" id="partners"></div></section>
+<footer class="foot">
+  <div class="foot-grid">
+    <div><img class="foot-logo" id="logo2" alt="GTQC"><p class="small">Gran Turismo Québec · Communauté de sim racing 100 % québécoise</p></div>
+    <div><h3>Soir de course</h3><div id="horaire"></div></div>
+    <div><h3>Suivre la ligue</h3><ul class="links" id="links"></ul><p class="mail" id="mail"></p></div>
+  </div>
+  <p class="small copy">Maquette, octobre 2026 · Données : Google Sheet GTQC_Base_Donnees (onglet Evenements)</p>
+</footer>
+
+<script src="chargeur.js" data-scripts="commun.js evenements.js"></script>
