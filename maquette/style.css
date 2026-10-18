@@ -244,7 +244,7 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
 .chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .dgrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
 .dcard {
-  position: relative; display: grid; grid-template-rows: 1fr auto auto; aspect-ratio: 3 / 4; max-width: 100%; overflow: hidden; isolation: isolate;
+  position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto auto; aspect-ratio: 3 / 4; max-width: 100%; overflow: hidden; isolation: isolate;
   border-radius: 14px; padding: 20px; text-decoration: none; background: linear-gradient(160deg, var(--c1) 0%, var(--c2) 100%);
   transition: transform .2s, box-shadow .2s;
 }
@@ -253,7 +253,9 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
 .dcard.t-D2 { --c1: #0D2C7A; --c2: #071437; }
 .dcard.t-R, .dcard.t-x { --c1: #22304A; --c2: #0E1626; }
 .dnum { position: absolute; top: 8px; left: 16px; z-index: -1; font-size: 120px; font-weight: 800; line-height: 1; color: transparent; -webkit-text-stroke: 2px rgba(255,255,255,.18); }
-.helmet { width: 78%; max-width: 230px; justify-self: center; align-self: end; filter: drop-shadow(0 10px 24px rgba(0,0,0,.45)); }
+.avatar { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; object-position: center bottom; }
+/* Casque par défaut : le fond studio de la photo se fond dans les couleurs de la carte */
+.avatar.default { -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent 100%); mask-image: radial-gradient(closest-side, #000 62%, transparent 100%); }
 .dinfo { display: grid; gap: 2px; margin-top: 14px; }
 .dname { font-size: 26px; font-weight: 800; line-height: 1.05; overflow-wrap: anywhere; }
 .dmeta { color: var(--muted); font-size: 14px; font-weight: 500; }
@@ -271,7 +273,7 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
 .pd-hero.t-D2 { --c1: #0D2C7A; --c2: #00162B; }
 .pd-hero.t-R, .pd-hero.t-x { --c1: #22304A; --c2: #00162B; }
 .pd-avatar { position: relative; display: grid; place-items: center; aspect-ratio: 1; max-width: 100%; border-radius: 50%; background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.12), rgba(255,255,255,0) 70%); }
-.pd-avatar .helmet { width: 72%; margin-bottom: 14%; }
+.pd-avatar .avatar { border-radius: 50%; object-fit: cover; }
 .pd-soon { position: absolute; bottom: 9%;font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
 .pd-id { display: grid; gap: 14px; min-width: 0; }
 .pd-rank { color: var(--accent); font-weight: 700; font-size: 18px; }

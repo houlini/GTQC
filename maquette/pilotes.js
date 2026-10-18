@@ -3,20 +3,11 @@
   const G = window.GT, D = G.D, { $, esc } = G;
   let season = G.current, filter = "tous";
 
-  // Avatar provisoire : casque aux couleurs de la division, en attendant les captures des pilotes
-  const PAL = { D1: ["#E6FF00", "#00162B"], D2: ["#0048FF", "#FFFFFF"], R: ["#5B6B86", "#FFFFFF"], "": ["#5B6B86", "#FFFFFF"] };
-  function helmet(tag, seed) {
-    const [c, ink] = PAL[tag] || PAL[""];
-    const tilt = (seed.charCodeAt(0) % 2) ? 1 : -1;
-    return `<svg class="helmet" viewBox="0 0 200 170" aria-hidden="true">
-      <g transform="${tilt < 0 ? "translate(200 0) scale(-1 1)" : ""}">
-        <path d="M28 118C26 62 74 26 128 30c40 3 62 34 62 74v26c0 12-9 20-20 20H64c-20 0-35-13-36-32z" fill="${c}"/>
-        <path d="M86 70c26-10 72-8 100 14l2 30H112c-15 0-26-11-26-26z" fill="#0B1424"/>
-        <path d="M96 74c22-6 56-5 82 8" stroke="rgba(255,255,255,.35)" stroke-width="4" fill="none" stroke-linecap="round"/>
-        <path d="M40 132h138" stroke="${ink}" stroke-opacity=".35" stroke-width="6"/>
-        <path d="M60 50c-14 14-22 34-22 58" stroke="${ink}" stroke-opacity=".5" stroke-width="10" fill="none" stroke-linecap="round"/>
-      </g></svg>`;
-  }
+  // Avatar : colonne Pilotes.avatar (chemin sous assets/img/) si présente, sinon le casque GTQC × Vacecraft
+  const avatar = id => {
+    const own = (G.pilots[id] || {}).avatar;
+    return `<img class="avatar${own ? "" : " default"}" src="${G.IMG + esc(own || "casques/casque-avatar.jpg")}" alt="" loading="lazy">`;
+  };
 
   // ---------- Données d'une saison
   function roster() {
@@ -43,7 +34,7 @@
       const div = p.tag === "R" ? "Réserve" : p.tag ? "Division " + p.tag.slice(1) : "";
       return `<li><a class="dcard t-${p.tag || "x"}" href="#${esc(p.id)}">
         <span class="dnum" aria-hidden="true">${esc(big)}</span>
-        ${helmet(p.tag, p.id)}
+        ${avatar(p.id)}
         <span class="dinfo">
           <span class="dname">${esc(G.name(p.id))}</span>
           <span class="dmeta">${esc([div, p.team && p.team.nom].filter(Boolean).join(" · "))}</span>
@@ -92,7 +83,7 @@
     $("detailView").innerHTML = `
       <a class="back" href="#">‹ Tous les pilotes</a>
       <div class="pd-hero t-${tag || "x"}">
-        <div class="pd-avatar">${helmet(tag, id)}<span class="pd-soon">Avatar à venir</span></div>
+        <div class="pd-avatar">${avatar(id)}${p.avatar ? "" : '<span class="pd-soon">Casque de la ligue</span>'}</div>
         <div class="pd-id">
           <span class="pd-rank">${/^\d+$/.test(st.rank) ? st.rank + "<sup>e</sup> au classement" : esc(st.rank)}</span>
           <h1>${esc(p.pseudo)}</h1>
