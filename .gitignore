@@ -8,3 +8,6 @@ Photos/
 # Premier export de la base (obsolète, contient les noms réels des pilotes).
 # La référence est maintenant le Google Sheet GTQC_Base_Donnees.
 database/GTQC_Base_Donnees.xlsx
+
+# Ancien clone vide créé par GitHub Desktop (à supprimer)
+GTQC/
