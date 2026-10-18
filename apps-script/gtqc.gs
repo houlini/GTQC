@@ -36,7 +36,8 @@ function doPost(e) {
 
 function router(e, corps) {
   const p = e.parameter || {};
-  const secret = PropertiesService.getScriptProperties().getProperty('SECRET');
+  // Propriété SECRET si elle existe, sinon le code envoyé par deployer.ps1 (Secret.js, généré depuis _prive/, jamais dans Git)
+  const secret = PropertiesService.getScriptProperties().getProperty('SECRET') || (typeof SECRET_DEPLOYE !== 'undefined' ? SECRET_DEPLOYE : '');
   if (!secret || p.secret !== secret) return { ok: false, erreur: 'secret' };
   try {
     if (p.action === 'donnees') return { ok: true, maj: new Date().toISOString(), donnees: donneesPubliques() };
@@ -462,6 +463,14 @@ function inscription(c) {
   }
   if ('note_admin' in c) maj.note_admin = String(c.note_admin).slice(0, 1000);
   return { ok: true, inscription: enregistrerLigne('_Inscriptions', x => String(x.id) === String(c.id), maj), resume: `${c.id} ${c.statut || ''}` };
+}
+
+/** À lancer une fois dans l'éditeur (bouton Exécuter) : Google demande les autorisations du script
+    (classeur, Drive pour les captures, courriel pour l'avis d'inscription). Sans elles, l'application web répond 403. */
+function autoriser() {
+  console.log('Classeur :', classeur().getName());
+  console.log('Drive :', DriveApp.getRootFolder().getName());
+  console.log('Courriels restants aujourd\'hui :', MailApp.getRemainingDailyQuota());
 }
 
 /** À lancer une fois dans l'éditeur : crée le code SECRET (à copier dans les deux Workers). */
