@@ -15,7 +15,7 @@ binding = "ASSETS"
 [vars]
 # Zero Trust → Access → Applications → (l'application admin GTQC) → Vue d'ensemble.
 ACCESS_TEAM_DOMAIN = "https://lnhq.cloudflareaccess.com"   # équipe Zero Trust du compte (la même que LNHQ)
-ACCESS_AUD = ""
+ACCESS_AUD = "0ec9c90e24c6409af639faae25e5f344629b161a01d62294ec65f9c97cd9c3c5"
 # Modèle qui lit les captures de résultats GT7 (alias : toujours le Flash le plus récent).
 GEMINI_MODEL = "gemini-flash-latest"
 
