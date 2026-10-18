@@ -17,7 +17,10 @@ binding = "ASSETS"
 # Zero Trust → Access → Applications → (l'application admin GTQC) → Vue d'ensemble.
 ACCESS_TEAM_DOMAIN = "https://EQUIPE.cloudflareaccess.com"
 ACCESS_AUD = ""
+# Modèle qui lit les captures de résultats GT7 (alias : toujours le Flash le plus récent).
+GEMINI_MODEL = "gemini-flash-latest"
 
 # Secrets (jamais dans ce fichier), mêmes valeurs que pour gtqc-api :
 #   npx wrangler secret put SCRIPT_URL
 #   npx wrangler secret put SCRIPT_SECRET
+#   npx wrangler secret put GEMINI_KEY      (clé gratuite Google AI Studio : lecture des captures de résultats)

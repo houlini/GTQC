@@ -7,7 +7,7 @@
      donnees   → tous les onglets publics, réglages des prochaines manches retirés
      inscrire  → formulaire « Rejoindre » (onglet privé _Inscriptions)
    Actions admin (Worker gtqc-admin, derrière Cloudflare Access ; courriel dans _Admins) :
-     etat, manche, resultats, penalites, vods, photo, photos, pilote, engagement, grille,
+     etat, manche, resultats, penalites, vods, photo, photos, psn, pilote, engagement, grille,
      remplacements, inscription
 
    Onglets dont le nom commence par « _ » : jamais publiés.
@@ -44,7 +44,7 @@ function router(e, corps) {
 
     const admin = adminDe(p.courriel);
     if (!admin) return { ok: false, erreur: 'admin' };
-    const actions = { etat, manche, resultats, penalites, vods, photo, photos, pilote, engagement, grille, remplacements, inscription };
+    const actions = { etat, manche, resultats, penalites, vods, photo, photos, psn, pilote, engagement, grille, remplacements, inscription };
     const f = actions[p.action];
     if (!f) return { ok: false, erreur: 'action' };
     if (f === etat) return etat(admin);
@@ -355,6 +355,15 @@ function photos(c) {
   });
   remplacerLignes('Photos', x => x.course_id === c.course_id, gardees);
   return { ok: true, resume: `${c.course_id} : ${gardees.length} captures` };
+}
+
+/** Identifiants PSN lus sur les captures de résultats → pilote (onglet privé _PSN, jamais publié). */
+function psn(c) {
+  if (!Array.isArray(c.lignes)) return { ok: false, erreur: 'champs' };
+  const quand = Utilities.formatDate(new Date(), FUSEAU, 'yyyy-MM-dd HH:mm');
+  const lignes = c.lignes.filter(l => l.psn && l.pilote_id).map(l => ({ psn: String(l.psn).trim().slice(0, 40), pilote_id: l.pilote_id }));
+  lignes.forEach(l => enregistrerLigne('_PSN', x => String(x.psn).toLowerCase() === l.psn.toLowerCase(), Object.assign({ ajoute_le: quand }, l)));
+  return { ok: true, resume: `${lignes.length} PSN` };
 }
 
 function dossierPhotos() {

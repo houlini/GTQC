@@ -79,3 +79,5 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .ph img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; background: #000; }
 .ph .adm-actions select { min-width: 0; width: auto; }
 .lien.on { color: var(--ink); text-decoration: underline; }
+.adm-table tr.manque td { background: rgba(255,209,102,.08); }
+.lu { display: block; color: var(--warn); font-size: 12px; margin-top: 2px; }

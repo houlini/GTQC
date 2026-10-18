@@ -195,8 +195,9 @@ import seulement ; les relancer ne met pas le Google Sheet à jour.
   (Team Rocket, Reserve Drivers, Euro Racing Team, Apex Racing Team).
 - Avatars des pilotes (plus tard).
 - Domaine du site (puis mise en ligne de l'API et de l'admin) ; chaînes Twitch des pilotes (`Pilotes.twitch`).
-- Lecture automatique des captures de résultats GT7 (voir plus haut) : l'admin accepte pour l'instant une liste
-  collée ou un fichier CSV/texte. Il faudra une table PSN → pilote dans le classeur privé.
+- Lecture des captures de résultats GT7 : faite (admin → Résultats → « Lire une capture du jeu », Gemini gratuit comme
+  LNHQ, clé `GEMINI_KEY`). Les identifiants PSN lus sont associés aux pilotes dans l'onglet privé `_PSN`, appris au fil
+  des saisies. À tester sur de vraies captures une fois l'admin en ligne ; ensuite, saisir les anciennes manches.
 - Les courses de la ligue sont diffusées sur une autre chaîne : `Config.twitch_url` n'est plus affiché sur le site.
 - Réglé (S1) : le tableau « ENTRER POINTS ICI » contient les points marqués par les remplaçants. Ces points comptent
   pour l'équipe, mais pas pour le pilote remplacé. Les points par pilote du classement officiel sont donc les bons

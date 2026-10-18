@@ -33,7 +33,7 @@
       await new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "../../../maquette/data.js"; s.onload = ok; s.onerror = ko; document.head.append(s); });
       D = window.GTQC; demo = true; $("demo").hidden = false; $("moi").textContent = "démo";
     }
-    for (const k of ["Vods", "Photos", "Grilles", "Remplacements", "_Inscriptions", "_Journal", "Engagements", "Penalites", "Manches_Categories"]) D[k] = D[k] || [];
+    for (const k of ["Vods", "Photos", "_PSN", "Grilles", "Remplacements", "_Inscriptions", "_Journal", "Engagements", "Penalites", "Manches_Categories"]) D[k] = D[k] || [];
     saison = saison || cfg().saison_courante || "S02";
     return true;
   }
@@ -148,7 +148,12 @@
     return `<div class="adm-head"><h1>Résultats</h1><div class="adm-actions"><select id="resManche">${optManches(m.course_id)}</select>
         <div class="seg" id="resLobby">${["D1", "D2"].map(c => `<button type="button" data-lobby="${c}" aria-pressed="${ui.lobby === c}">Lobby ${c.slice(1)}</button>`).join("")}</div></div></div>
       <div class="adm-cols">
-        <div class="adm-card"><h2>Coller ou téléverser le classement</h2>
+        <div class="adm-card"><h2>Lire une capture du jeu</h2>
+          <p class="muted">Capture ou photo de l'écran des résultats de GT7 (plusieurs si le tableau tient sur 2 pages). Positions, DNF et meilleur tour sont remplis dans le tableau ; tu vérifies avant d'enregistrer.</p>
+          <label class="drop" id="dropLu"><input type="file" id="luFichiers" accept="image/jpeg,image/png,image/webp" multiple hidden>
+            <b>Glisse la capture des résultats ici</b><span>ou clique pour la choisir</span></label>
+          <p class="muted" id="luEtat"></p>
+          <h2>Ou coller le classement</h2>
           <p class="muted">Un pilote par ligne, dans l'ordre d'arrivée (pseudo, ou « 3, pseudo »). Ajoute DNF / DNS / DSQ et MT (meilleur tour) sur la ligne au besoin. Fichier CSV ou texte accepté.</p>
           <textarea id="colle" rows="8" placeholder="Jaynord MT&#10;AMS_Lookie22&#10;Flagman DNF"></textarea>
           <div class="adm-actions"><button type="button" class="btn ghost" id="lireColle">Remplir le tableau</button><label class="btn ghost file">Fichier…<input type="file" id="fichier" accept=".csv,.txt,text/plain,text/csv" hidden></label></div>
@@ -158,7 +163,7 @@
           <table class="adm-table"><thead><tr><th>Pos.</th><th>Pilote</th><th>Statut</th><th>MT</th><th>Pts</th><th>Note</th><th></th></tr></thead><tbody>
           ${b.lignes.map((l, i) => {
             const pts = l.statut === "Classé" ? ptsPosition(ui.lobby, i + 1) + (l.meilleur_tour ? bonus : 0) : 0;
-            return `<tr data-i="${i}"><td>${i + 1}</td><td><select data-k="pilote_id">${optPilotes(l.pilote_id, "Choisir", liste)}</select></td>
+            return `<tr data-i="${i}" class="${l.lu && !l.pilote_id ? "manque" : ""}"><td>${i + 1}</td><td><select data-k="pilote_id">${optPilotes(l.pilote_id, "Choisir", liste)}</select>${l.lu ? `<small class="lu">lu : ${esc(l.lu)}</small>` : ""}</td>
               <td><select data-k="statut">${options(STATUTS_RES.map(s => [s, s]), l.statut)}</select></td>
               <td><input type="radio" name="mt" data-k="meilleur_tour" ${l.meilleur_tour ? "checked" : ""} aria-label="Meilleur tour"></td><td class="num">${pts}</td>
               <td><input data-k="note" value="${esc(l.note)}" placeholder="ex. Remplace X"></td>
@@ -180,8 +185,49 @@
       </div>`;
   }
   /** Lit le texte collé : une ligne par pilote, statut (DNF…) et MT reconnus, pseudos rapprochés sans accents ni symboles. */
+  /** Nom lu (PSN ou pseudo) → pilote : onglet privé _PSN d'abord, puis le pseudo sans accents ni symboles. */
+  function trouverPilote(nom) {
+    const n = norm(nom);
+    if (!n) return "";
+    const lien = D._PSN.find(x => norm(x.psn) === n);
+    if (lien) return lien.pilote_id;
+    const p = D.Pilotes.find(x => norm(x.pseudo) === n || norm(x.pilote_id) === n)
+      || D.Pilotes.find(x => n.length > 3 && norm(x.pseudo).length > 3 && (norm(x.pseudo).includes(n) || n.includes(norm(x.pseudo))));
+    return p ? p.pilote_id : "";
+  }
+  /** Lignes lues sur une ou plusieurs captures (fusionnées par position) → tableau des résultats. */
+  function appliquerLecture(lues) {
+    const parPos = new Map();
+    lues.forEach(l => { if (!parPos.has(l.position)) parPos.set(l.position, l); });
+    const lignes = [...parPos.values()].sort((a, b) => a.position - b.position);
+    // Meilleur tour : le plus petit temps parmi les pilotes classés (format m:ss.xxx)
+    const sec = t => { const m = /^(?:(\d+):)?(\d{1,2})[.,](\d{1,3})$/.exec(String(t || "").trim()); return m ? (Number(m[1] || 0) * 60 + Number(m[2]) + Number("0." + m[3])) : Infinity; };
+    const mt = lignes.filter(l => l.statut === "Classé").reduce((best, l) => sec(l.meilleur_tour) < sec(best && best.meilleur_tour) ? l : best, null);
+    ui.brouillon.lignes = lignes.map(l => ({ pilote_id: trouverPilote(l.nom), lu: l.nom, statut: l.statut, meilleur_tour: !!mt && sec(mt.meilleur_tour) < Infinity && l === mt, note: "" }));
+    render();
+    const manquants = ui.brouillon.lignes.filter(l => !l.pilote_id).map(l => l.lu);
+    toast(`${lignes.length} pilotes lus${manquants.length ? `, ${manquants.length} à associer (choisis le pilote : il sera retenu pour les prochaines fois)` : ""}. Vérifie avant d'enregistrer.`, manquants.length ? "warn" : "ok");
+  }
+  async function lireCaptures(fichiers) {
+    const liste = [...fichiers].filter(f => /^image\/(jpeg|png|webp)$/.test(f.type));
+    if (!liste.length) return toast("Choisis des captures JPEG, PNG ou WebP.", "err");
+    if (demo) return toast("Mode démo : la lecture des captures se fait par le serveur (clé Gemini), disponible une fois l'admin en ligne.", "warn");
+    const etat = $("luEtat"), lues = [];
+    for (const [i, f] of liste.entries()) {
+      etat.textContent = `Lecture ${i + 1} / ${liste.length} : ${f.name}…`;
+      try {
+        const img = await reduire(f);
+        const rep = await fetch("/api/resultats/lire", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: img.data, mime: img.mime }) });
+        const r = await rep.json();
+        if (!r.ok) throw new Error({ lecture_indisponible: "clé Gemini absente du Worker", quota: "quota Gemini atteint, réessaie dans une minute" }[r.erreur] || r.erreur);
+        if (!r.lecture.lisible) throw new Error("tableau des résultats introuvable sur l'image");
+        lues.push(...r.lecture.lignes);
+      } catch (err) { toast(`${f.name} : ${err.message}`, "err"); }
+    }
+    etat.textContent = "";
+    if (lues.length) appliquerLecture(lues);
+  }
   function lireClassement(texte) {
-    const index = D.Pilotes.map(p => ({ id: p.pilote_id, n: norm(p.pseudo) }));
     const inconnus = [], lignes = [];
     texte.split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => {
       const morceaux = l.split(/[,;\t]/).map(s => s.trim()).filter(Boolean);
@@ -195,9 +241,8 @@
       const fin = nom.match(/\s+(DNF|DNS|DSQ|MT)$/i);
       if (fin) { if (/MT/i.test(fin[1])) mt = true; else statut = fin[1].toUpperCase(); nom = nom.slice(0, fin.index); }
       nom = nom.replace(/^\d{1,2}(e|er)?[.)]?\s+/i, "");
-      const n = norm(nom);
-      const p = index.find(x => x.n === n) || index.find(x => n.length > 3 && (x.n.includes(n) || n.includes(x.n)));
-      if (p) lignes.push({ pilote_id: p.id, statut, meilleur_tour: mt, note: "" }); else if (nom) inconnus.push(nom);
+      const id = trouverPilote(nom);
+      if (id) lignes.push({ pilote_id: id, statut, meilleur_tour: mt, note: "" }); else if (nom) inconnus.push(nom);
     });
     return { lignes, inconnus };
   }
@@ -431,6 +476,7 @@
     if (t.id === "phLobby") { ui.phLobby = t.value; return; }
     if (t.id === "phSource") { ui.phSource = t.value; return; }
     if (t.id === "phFichiers" && t.files.length) { envoyerPhotos(t.files); return; }
+    if (t.id === "luFichiers" && t.files.length) { lireCaptures(t.files); return; }
     const ph = t.closest("[data-ph]");
     if (ph && t.dataset.k) { ui.phB.lignes[+ph.dataset.ph][t.dataset.k] = t.type === "checkbox" ? t.checked : t.value; return; }
     if (t.id === "fi") { ui.fi = t.value; return render(); }
@@ -493,7 +539,10 @@
     if (t.id === "saveRes") {
       if (L.some(l => !l.pilote_id)) return toast("Chaque ligne doit avoir un pilote.", "err");
       if (new Set(L.map(l => l.pilote_id)).size !== L.length) return toast("Un pilote apparaît deux fois.", "err");
-      return envoyer("resultats", { course_id: ui.res, categorie_id: ui.lobby, terminer: $("terminer").checked, lignes: L.map((l, i) => ({ ...l, position: i + 1 })) }, `Résultats ${ui.res} ${ui.lobby}`);
+      // Noms lus sur la capture et associés à la main : retenus dans _PSN pour les prochaines lectures
+      const nouveaux = L.filter(l => l.lu && l.pilote_id && norm(l.lu) !== norm(pseudo(l.pilote_id)) && !D._PSN.some(x => norm(x.psn) === norm(l.lu)));
+      if (nouveaux.length) await envoyer("psn", { lignes: nouveaux.map(l => ({ psn: l.lu, pilote_id: l.pilote_id })) }, `${nouveaux.length} PSN retenu(s)`);
+      return envoyer("resultats", { course_id: ui.res, categorie_id: ui.lobby, terminer: $("terminer").checked, lignes: L.map((l, i) => ({ pilote_id: l.pilote_id, statut: l.statut, meilleur_tour: l.meilleur_tour, note: l.note, position: i + 1 })) }, `Résultats ${ui.res} ${ui.lobby}`);
     }
     if (t.id === "ajPen") { ui.pens.lignes.push({ pilote_id: "", type: "Points", points: 1, motif: "", publier: true }); return render(); }
     if (d.pdel) { ui.pens.lignes.splice(+d.pdel, 1); return render(); }
@@ -555,9 +604,13 @@
     }
   });
   // Glisser-déposer des captures
-  main.addEventListener("dragover", e => { const z = e.target.closest("#drop"); if (!z) return; e.preventDefault(); z.classList.add("over"); });
-  main.addEventListener("dragleave", e => { const z = e.target.closest("#drop"); if (z) z.classList.remove("over"); });
-  main.addEventListener("drop", e => { const z = e.target.closest("#drop"); if (!z) return; e.preventDefault(); z.classList.remove("over"); envoyerPhotos(e.dataTransfer.files); });
+  main.addEventListener("dragover", e => { const z = e.target.closest(".drop"); if (!z) return; e.preventDefault(); z.classList.add("over"); });
+  main.addEventListener("dragleave", e => { const z = e.target.closest(".drop"); if (z) z.classList.remove("over"); });
+  main.addEventListener("drop", e => {
+    const z = e.target.closest(".drop"); if (!z) return;
+    e.preventDefault(); z.classList.remove("over");
+    if (z.id === "dropLu") lireCaptures(e.dataTransfer.files); else envoyerPhotos(e.dataTransfer.files);
+  });
   main.addEventListener("submit", e => {
     e.preventDefault();
     const f = e.target, v = lireForm(f);
@@ -581,4 +634,6 @@
   if (VUES[location.hash.slice(1)]) tab = location.hash.slice(1);
   addEventListener("hashchange", () => { if (VUES[location.hash.slice(1)]) { tab = location.hash.slice(1); render(); } });
   charger().then(ok => { if (ok) render(); });
+  // Tests en mode démo : lecture simulée d'une capture
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.GTQCAdmin = { appliquerLecture, trouverPilote };
 })();

@@ -49,5 +49,6 @@ prochaines manches de `data.js` (même règle que l'API).
 4. **Cloudflare Access** : Zero Trust → Access → Applications → *Self-hosted* sur `admin.DOMAINE`, politique
    « courriels » avec les admins. Copie le domaine d'équipe et l'AUD dans `workers/admin/wrangler.toml`.
 5. **Worker admin** (`workers/admin`) : `npx wrangler secret put SCRIPT_URL` et `SCRIPT_SECRET`, puis `npx wrangler deploy`.
+   Pour lire les captures de résultats GT7 : `npx wrangler secret put GEMINI_KEY` (clé gratuite sur aistudio.google.com).
 6. **Site** : mets l'adresse de l'API dans `maquette/chargeur.js` (`const API = "https://api.DOMAINE"`) et dans
    `Config.api_url`. Les admins sont listés dans l'onglet `_Admins` (colonne `actif`).
