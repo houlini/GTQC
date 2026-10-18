@@ -81,8 +81,9 @@ async function twitch(env, ctx) {
       if (!s) return;
       const tags = (s.tags || []).map(t => t.toLowerCase());
       c.live = true;
-      // Tag Twitch « GTQC », ou le mot GTQC dans le titre, avec ou sans « # » : la diffusion
-      // PlayStation n'a pas de tags et retire les « # » du titre.
+      // Tag Twitch « GTQC » (le plus fiable), ou le mot GTQC dans le titre. La diffusion PlayStation n'a
+      // pas de tags et efface le « # » ET le texte qui le suit : « #GTQC » dans le titre n'arrive jamais ici,
+      // d'où la consigne d'écrire GTQC sans # (page GTQC TV).
       c.gtqc = tags.includes(tag) || new RegExp('(^|[^a-z0-9])' + tag + '($|[^a-z0-9])', 'i').test(s.title || '');
       c.nom = s.user_name;
       c.titre = s.title;

@@ -38,7 +38,7 @@
     if (!c) {
       state.lecteurDe = "";
       const v = el("div", "tv-vide");
-      v.append(el("strong", null, `Personne n'est en direct avec le tag #${state.tag} pour l'instant.`),
+      v.append(el("strong", null, `Personne n'est en direct avec le tag ${state.tag} pour l'instant.`),
         el("span", null, "Les directs des pilotes apparaissent ici automatiquement. Choisis une chaîne plus bas pour voir ses anciennes vidéos."));
       $("scene").replaceChildren(v);
       return;
@@ -138,7 +138,7 @@
     const corps = el("div", "tv-carte-corps"), nom = el("div", "tv-carte-nom");
     nom.append(el("span", null, nomDe(c)));
     if (enDirect(c)) nom.append(el("span", "tv-badge", "En direct"));
-    else if (c.live) nom.append(el("span", "tv-badge is-autre", "En ligne sans #" + state.tag));
+    else if (c.live) nom.append(el("span", "tv-badge is-autre", "En ligne sans le tag " + state.tag));
     const detail = enDirect(c) ? `${nombre.format(c.spectateurs || 0)} spectateurs · depuis ${depuis(c.debut)}${c.titre ? " · " + c.titre : ""}` : [lobbyTxt(c.lobby), "twitch.tv/" + c.chaine].filter(Boolean).join(" · ");
     corps.append(nom, el("div", "tv-carte-detail", detail));
     b.title = enDirect(c) && c.titre ? c.titre : nomDe(c);
