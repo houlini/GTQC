@@ -86,7 +86,7 @@ Dans le Sheet, une image = son chemin à partir de `assets/img/` (ex. `sponsors/
   [database/inventaire_images.csv](database/inventaire_images.csv) explique chaque fichier.
 - Exclus de Git (`.gitignore`) : `Photos/` (courriels et téléphones privés), `_prive/`, et l'ancien export
   `database/GTQC_Base_Donnees.xlsx` (il contient les noms réels).
-- **À recevoir** : avatars des pilotes, logo de la Team, logos de Vicecraft, Cardinal et EuroKart,
+- **À recevoir** : avatars des pilotes, logo de la Team, logo d'EuroKart,
   liste des numéros de course, classement final S1. Pas de logo vectoriel : on utilise le PNG.
 
 ## 4. Base de données
@@ -147,7 +147,7 @@ import seulement ; les relancer ne met pas le Google Sheet à jour.
 | Équipes S1 | Dans les archives | `Equipe.publier = TRUE` |
 | Sponsors S1 | Pas dans les archives ; seul EuroKart était un vrai commanditaire | RustyPod et GoPlex retirés ; EuroKart = commanditaire S1 |
 | Chez Miller | Pas encore confirmé | inchangé (non affiché) |
-| Vicecraft | Bon nom | `Sponsors` |
+| Vacecraft | Bon nom : Vacecraft, comme sur le logo (corrigé après « Vicecraft ») | `Sponsors`, `Reglements`, `Pilotes` |
 | Forfaits | Pas de page « Devenir partenaire » | `Forfaits_Commandite.publier = FALSE` |
 | Smiley jaune | Mascotte Dubby | image `sponsors/dubby-smiley.svg` |
 | Logo « X » vert | Pas Exscellant, à ignorer | retiré de `assets/img` |
@@ -179,7 +179,7 @@ import seulement ; les relancer ne met pas le Google Sheet à jour.
 
 ## 6. Ce qu'on attend encore
 
-- Logos de Vicecraft, Cardinal, EuroKart, et plus tard de la Team ; logos des équipes S1 manquantes
+- Logo d'EuroKart, et plus tard de la Team (logos Vacecraft et Cardinal Club reçus) ; logos des équipes S1 manquantes
   (Team Rocket, Reserve Drivers, Euro Racing Team, Apex Racing Team).
 - Avatars des pilotes (plus tard).
 - Réglé (S1) : le tableau « ENTRER POINTS ICI » contient les points marqués par les remplaçants. Ces points comptent
@@ -190,7 +190,7 @@ import seulement ; les relancer ne met pas le Google Sheet à jour.
 - Réglé (S1) : Go Plex n'est pas remis dans les commanditaires.
 - Réglé : Lake Louise = Long Track ; « Misha S13 » = S-TH1RT3EN ; l'affiche avec le casque n'est plus attribuée à une équipe.
   Détails S1 ajoutés : départ 19 h, nombre de tours, conditions, Subaru Impreza Gr.B pour le rallye de nuit à Lake Louise.
-- Le pilote « Vicecraft » (fiche Vincent Vicecraft) n'a pas de pseudo Discord connu : le site affiche « Vicecraft » pour l'instant.
+- Le pilote « Vacecraft » n'a pas de pseudo Discord connu : le site affiche « Vacecraft » pour l'instant.
 
 ### Vérification du 18 oct. 2026
 
@@ -206,4 +206,4 @@ import seulement ; les relancer ne met pas le Google Sheet à jour.
   - Maggiore (M5) : Gridfinder dit « Center Reverse », le Sheet d'origine dit « Full Reverse ».
   - Sainte-Croix (M7) : Gridfinder indique 9 h au lieu de 18 h.
   - Les événements publics (20 sept, 4 oct, 25 oct, 8 nov, 22 nov) tombent en fait les dimanches **sans** course.
-  - Les règlements écrivent le tag « Vacecraft » alors que le nom retenu est « Vicecraft ».
+  - Réglé : le commanditaire s'écrit « Vacecraft », comme sur son logo.

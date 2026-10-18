@@ -502,7 +502,7 @@ sponsors = [
      "sponsors/willy-woodshop.svg", "sponsors/willy-woodshop-fond-noir.svg", ""),
     ("dubby", "Dubby", "S02", "", "Confirmé", "Starter pack 40 $ + swag", "", "TRUE",
      "sponsors/dubby.svg", "sponsors/dubby.svg", ""),
-    ("vicecraft", "Vicecraft", "S02", "", "Confirmé", "2 casques personnalisés",
+    ("vacecraft", "Vacecraft", "S02", "", "Confirmé", "2 casques personnalisés",
      "Casques custom (« Vacecraft » dans la source). LOGO MANQUANT", "TRUE", "", "", ""),
     ("cardinal", "Cardinal", "S02", "", "Confirmé", "2 cours de perfectionnement (1 h chacun)",
      "Coaching. Personne ou entreprise ? LOGO MANQUANT", "TRUE", "", "", ""),
