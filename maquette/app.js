@@ -214,7 +214,7 @@
     const c = $("chart");
     c.setAttribute("viewBox", `0 0 ${W} ${H}`);
     c.innerHTML = rs.length ? s : `<text x="20" y="40">Aucune manche terminée.</text>`;
-    $("legend").innerHTML = picked.map((id, k) => `<span style="--c:${G.COLORS[k % G.COLORS.length]}"><i></i>${esc(G.name(id))} · ${rk[id] && rk[id][rl] ? rk[id][rl] + "e au classement" : "–"}</span>`).join("");
+    $("legend").innerHTML = picked.map((id, k) => `<span style="--c:${G.COLORS[k % G.COLORS.length]}"><i></i>${esc(G.name(id))} · ${rk[id] && rk[id][rl] ? (rk[id][rl] === 1 ? "1er" : rk[id][rl] + "e") : "–"}</span>`).join("");
   }
   $("chartMode").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; chartMode = b.dataset.c; renderChart(); });
   $("pickerBtn").addEventListener("click", () => { const p = $("pickerPop"); p.hidden = !p.hidden; $("pickerBtn").setAttribute("aria-expanded", String(!p.hidden)); });
