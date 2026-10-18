@@ -3,8 +3,8 @@
    manches retirés côté serveur. Sans API (adresse vide, hors ligne ou en panne) : data.js, l'export du dépôt.
    Utilisation : <script src="chargeur.js" data-scripts="commun.js app.js"></script> */
 (() => {
-  // Adresse de l'API publique, à remplir quand le domaine sera choisi (ex. https://api.gtqc.ca).
-  const API = "";
+  // Adresse de l'API publique (Worker gtqc-api). Tant qu'elle ne répond pas, le site lit data.js.
+  const API = "https://api.gtqc.net";
   window.GTQC_API = API;
 
   const moi = document.currentScript;

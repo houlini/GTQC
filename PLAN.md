@@ -48,9 +48,9 @@ Site en **français seulement**, à l'adresse GitHub Pages gratuite. Liens : Fac
   (exécuté avec le compte propriétaire). Il publie les onglets publics, **sans les réglages des prochaines manches**
   (dévoilés `Config.reglages_jours_avant` jours avant, ou selon `Manches.reglages_visibles`). Les onglets `_…`
   (`_Inscriptions`, `_Admins`, `_Journal`) ne sont jamais publiés.
-- **API publique** : Worker Cloudflare `workers/api` (`api.<domaine>`) : `/donnees`, `/twitch` (GTQC TV) et
+- **API publique** : Worker Cloudflare `workers/api` (`api.gtqc.net`) : `/donnees`, `/twitch` (GTQC TV) et
   `/inscription` (formulaire Rejoindre). Les clés Twitch et le code du script restent côté serveur.
-- **Admin** : Worker `workers/admin` (`admin.<domaine>`), derrière **Cloudflare Access** (code par courriel). Seuls les
+- **Admin** : Worker `workers/admin` (`admin.gtqc.net`), derrière **Cloudflare Access** (code par courriel). Seuls les
   courriels de `_Admins` peuvent écrire. Il gère les manches, les résultats (collés ou en fichier, points calculés avec
   le barème), les pénalités, la grille des lobbys aux 2 manches, les réserves et absences, les pilotes (Twitch compris),
   les VOD, les captures des manches et les inscriptions.
@@ -60,7 +60,7 @@ Site en **français seulement**, à l'adresse GitHub Pages gratuite. Liens : Fac
 - **Site** : statique (GitHub Pages). `maquette/chargeur.js` lit l'API, ou `data.js` (export de secours) tant que
   l'API n'est pas en ligne.
 - **Classements calculés par le site** à partir de `Resultats` + `Penalites`, pour éviter les erreurs de formules à la main.
-- **Domaine** : pas encore décidé. Mise en ligne détaillée dans le [README](README.md#mise-en-ligne).
+- **Domaine** : **gtqc.net** (acheté le 18 oct. 2026, zone Cloudflare). Mise en ligne détaillée dans le [README](README.md#mise-en-ligne).
 
 ### Saisie des résultats par capture d'écran (demandé par le gestionnaire)
 
@@ -194,7 +194,7 @@ import seulement ; les relancer ne met pas le Google Sheet à jour.
 - Logo d'EuroKart, et plus tard de la Team (logos Vacecraft et Cardinal Club reçus) ; logos des équipes S1 manquantes
   (Team Rocket, Reserve Drivers, Euro Racing Team, Apex Racing Team).
 - Avatars des pilotes (plus tard).
-- Domaine du site (puis mise en ligne de l'API et de l'admin) ; chaînes Twitch des pilotes (`Pilotes.twitch`).
+- Mise en ligne sur gtqc.net (hébergement du site, API, admin) ; chaînes Twitch des pilotes (`Pilotes.twitch`).
 - Lecture des captures de résultats GT7 : faite (admin → Résultats → « Lire une capture du jeu », Gemini gratuit comme
   LNHQ, clé `GEMINI_KEY`). Les identifiants PSN lus sont associés aux pilotes dans l'onglet privé `_PSN`, appris au fil
   des saisies. À tester sur de vraies captures une fois l'admin en ligne ; ensuite, saisir les anciennes manches.

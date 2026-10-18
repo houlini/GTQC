@@ -3,14 +3,13 @@ main = "src/index.js"
 compatibility_date = "2026-09-01"
 
 # API publique du site GTQC : données (/donnees), GTQC TV (/twitch), formulaire (/inscription).
-# Adresse à décider : remplacer DOMAINE par le domaine choisi (zone gérée par Cloudflare), puis décommenter.
-workers_dev = true
+workers_dev = false
 preview_urls = false
-# routes = [{ pattern = "api.DOMAINE", custom_domain = true }]
+routes = [{ pattern = "api.gtqc.net", custom_domain = true }]
 
 [vars]
 # Adresses du site autorisées à lire l'API (séparées par des virgules). localhost est toujours permis.
-ORIGINES = "https://houlini.github.io"
+ORIGINES = "https://gtqc.net,https://www.gtqc.net"
 
 # Secrets (jamais dans ce fichier) :
 #   npx wrangler secret put SCRIPT_URL           adresse /exec de l'application web Apps Script GTQC
