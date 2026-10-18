@@ -205,7 +205,7 @@
   /* ---------- Grille des lobbys ---------- */
   function vueGrille() {
     const t = totaux(), tb = ptsBloc(), b2 = bloc();
-    const tit = titulaires().map(e => ({ id: e.pilote_id, pts: Math.round((t[e.pilote_id] || 0) * 10) / 10, bloc: Math.round((tb[e.pilote_id] || 0) * 10) / 10, actuel: lobbyDe(e.pilote_id), incidents: incidents(e.pilote_id) }))
+    const tit = titulaires().map(e => ({ id: e.pilote_id, pts: Math.round((t[e.pilote_id] || 0) * 10) / 10, bloc: Math.round((tb[e.pilote_id] || 0) * 10) / 10, actuel: lobbyDe(e.pilote_id) }))
       .sort((a, b) => (a.actuel || "D9").localeCompare(b.actuel || "D9") || b.bloc - a.bloc || b.pts - a.pts);
     const rangs = {};
     tit.forEach(r => { rangs[r.actuel] = (rangs[r.actuel] || 0) + 1; r.rang = `${r.actuel || "?"} · ${rangs[r.actuel]}`; });
@@ -216,13 +216,13 @@
     const zonesUp = bareme("D2").filter(b => /mont/i.test(b.zone || "")).length, zonesDown = bareme("D1").filter(b => /desc/i.test(b.zone || "")).length;
     const hist = [...new Set(D.Grilles.filter(g => g.saison_id === saison).map(g => g.a_partir_de))].sort((a, b) => b - a);
     return `<div class="adm-head"><h1>Grille des lobbys <small>${esc(saison)}</small></h1><div class="adm-actions">${choixSaison()}</div></div>
-      <p class="muted">Révision aux 2 manches (${faites} manche${faites > 1 ? "s" : ""} comptée${faites > 1 ? "s" : ""}). Proposition d'après les points des 2 dernières manches${b2.length ? " (" + b2.map(m => "M" + m.manche).join(" et ") + ")" : ""}, au plus ${Math.min(zonesUp, zonesDown) || 3} changements, souvent aucun. Un pilote du Lobby 1 n'est proposé à la descente que s'il a manqué une course ou abandonné (DNF) ; sa place va au meilleur du Lobby 2 sur ces 2 manches. Tu peux tout changer avant de publier : la décision reste à l'administration.</p>
+      <p class="muted">Révision aux 2 manches (${faites} manche${faites > 1 ? "s" : ""} comptée${faites > 1 ? "s" : ""}). Proposition d'après les points des 2 dernières manches${b2.length ? " (" + b2.map(m => "M" + m.manche).join(" et ") + ")" : ""}, au plus ${Math.min(zonesUp, zonesDown) || 3} changements, souvent aucun : le meilleur du Lobby 2 prend la place du dernier du Lobby 1 seulement s'il a plus de points sur ces 2 manches (puis le 2e contre l'avant-dernier, etc.). Tu peux tout changer avant de publier : la décision reste à l'administration.</p>
       <div class="adm-card">
         <div class="adm-actions"><label class="inline">Grille valide à partir de la manche <input type="number" id="grilleDe" min="1" value="${esc(aPartir)}"></label>
           <button type="button" class="btn ghost" id="reprop">Refaire la proposition</button></div>
-        <table class="adm-table"><thead><tr><th>Rang lobby</th><th>Pilote</th><th>Pts 2 dernières</th><th>Absences / DNF</th><th>Pts saison</th><th>Lobby actuel</th><th>Nouveau lobby</th><th>Mouvement</th></tr></thead><tbody>
+        <table class="adm-table"><thead><tr><th>Rang lobby</th><th>Pilote</th><th>Pts 2 dernières</th><th>Pts saison</th><th>Lobby actuel</th><th>Nouveau lobby</th><th>Mouvement</th></tr></thead><tbody>
         ${tit.map(r => { const n = ui.prop.choix[r.id] || r.actuel; const mv = mouvement(r.actuel, n);
-          return `<tr class="${mv ? "move" : ""}"><td>${r.rang}</td><td>${esc(pseudo(r.id))}</td><td class="num">${r.bloc}</td><td class="num">${r.incidents || ""}</td><td class="num">${r.pts}</td><td>${esc(r.actuel || "?")}</td>
+          return `<tr class="${mv ? "move" : ""}"><td>${r.rang}</td><td>${esc(pseudo(r.id))}</td><td class="num">${r.bloc}</td><td class="num">${r.pts}</td><td>${esc(r.actuel || "?")}</td>
             <td><select data-g="${esc(r.id)}">${options([["D1", "Lobby 1"], ["D2", "Lobby 2"]], n)}</select></td><td>${mv ? (mv === "Montée" ? "▲ Montée" : "▼ Descente") : ""}</td></tr>`; }).join("")}</tbody></table>
         <div class="adm-actions"><button type="button" class="btn" id="saveGrille">Publier la grille</button><span class="muted">Le site affiche aussitôt le nouveau lobby de chaque pilote.</span></div>
       </div>
@@ -240,22 +240,16 @@
     }
     return t;
   }
-  /** Manches du bloc où le pilote était absent (aucun résultat) ou n'a pas terminé (DNF, DNS, DSQ). */
-  function incidents(id) {
-    return bloc().reduce((n, m) => {
-      const r = resultatsDe(m.course_id).find(x => x.pilote_id === id);
-      return n + (!r || (r.statut && r.statut !== "Classé") ? 1 : 0);
-    }, 0);
-  }
-  // Maximum 3 changements (zones du barème), et souvent 0 : un pilote du Lobby 1 n'est proposé à la descente
-  // que s'il a manqué une course ou abandonné (DNF) dans les 2 dernières manches. Chaque descente libère
-  // une place pour le meilleur du Lobby 2 sur ces 2 manches. L'administration valide.
+  // Uniquement les points des 2 dernières manches, maximum 3 changements, souvent 0. Le barème du Lobby 1
+  // est plus élevé (même le dernier y fait ~17 pts) : un pilote du Lobby 2 ne dépasse un pilote du Lobby 1
+  // que si celui-ci a perdu des points (course manquée, DNF, pénalité). On échange le meilleur du Lobby 2
+  // avec le dernier du Lobby 1 tant que le premier a strictement plus de points. L'administration valide.
   function proposer(tit) {
     const max = Math.min(bareme("D2").filter(b => /mont/i.test(b.zone || "")).length, bareme("D1").filter(b => /desc/i.test(b.zone || "")).length) || 3;
     const choix = Object.fromEntries(tit.map(r => [r.id, r.actuel || "D2"]));
-    const d1 = tit.filter(r => r.actuel === "D1" && r.incidents > 0).sort((a, b) => b.incidents - a.incidents || a.bloc - b.bloc);
-    const d2 = tit.filter(r => r.actuel !== "D1").sort((a, b) => a.incidents - b.incidents || b.bloc - a.bloc || b.pts - a.pts);
-    for (let i = 0; i < max && i < d1.length && i < d2.length; i++) { choix[d2[i].id] = "D1"; choix[d1[i].id] = "D2"; }
+    const d1 = tit.filter(r => r.actuel === "D1").sort((a, b) => a.bloc - b.bloc || a.pts - b.pts);
+    const d2 = tit.filter(r => r.actuel !== "D1").sort((a, b) => b.bloc - a.bloc || b.pts - a.pts);
+    for (let i = 0; i < max && i < d1.length && i < d2.length && d2[i].bloc > d1[i].bloc; i++) { choix[d2[i].id] = "D1"; choix[d1[i].id] = "D2"; }
     return choix;
   }
 
