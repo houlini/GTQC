@@ -1,0 +1,66 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GTQC TV</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Les directs Twitch des pilotes de la ligue GTQC, en un seul endroit : 1, 2 ou 4 streams à la fois.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<body data-page="tv">
+<header class="topbar solid" id="topbar">
+  <a class="brand" href="index.html" aria-label="GTQC, accueil"><img id="logo" alt="GTQC"></a>
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="index.html">Courses</a>
+    <a href="pilotes.html">Pilotes</a>
+    <a href="#">Team</a>
+    <a href="#">Événements</a>
+    <a href="reglements.html">Règlements</a>
+    <a href="tv.html" aria-current="page">GTQC TV</a>
+    <a href="rejoindre.html">Rejoindre</a>
+  </nav>
+  <button class="menu-btn" type="button" aria-label="Menu"><span aria-hidden="true">≡</span> Menu</button>
+</header>
+
+<main class="tv-page">
+  <div class="tv-head">
+    <h1 class="dp-title">GTQC <span class="tv-accent">TV</span></h1>
+    <div class="tv-band">
+      <div class="tv-modes" role="group" aria-label="Nombre de streams affichés">
+        <button type="button" data-mode="1" title="1 stream"><svg viewBox="0 0 18 14" fill="currentColor"><rect width="18" height="14" rx="2"/></svg>1</button>
+        <button type="button" data-mode="2" title="2 streams"><svg viewBox="0 0 18 14" fill="currentColor"><rect width="8" height="14" rx="2"/><rect x="10" width="8" height="14" rx="2"/></svg>2</button>
+        <button type="button" data-mode="4" title="4 streams"><svg viewBox="0 0 18 14" fill="currentColor"><rect width="8" height="6" rx="1.5"/><rect x="10" width="8" height="6" rx="1.5"/><rect y="8" width="8" height="6" rx="1.5"/><rect x="10" y="8" width="8" height="6" rx="1.5"/></svg>4</button>
+      </div>
+      <button type="button" class="tv-plein-btn" id="pleinEcran" title="Plein écran : seulement les vidéos (Échap pour quitter)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 9 4 4 9 4"/><polyline points="15 4 20 4 20 9"/><polyline points="20 15 20 20 15 20"/><polyline points="9 20 4 20 4 15"/></svg>
+        Plein écran
+      </button>
+      <span class="tv-resume" id="resume" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <section id="scene" aria-label="Lecteur"></section>
+  <p class="tv-note" id="note" hidden></p>
+  <section class="tv-groupe" id="groupeLive" hidden>
+    <h2><span class="tv-point" aria-hidden="true"></span>En direct <span class="tv-compte" id="compteLive"></span></h2>
+    <div class="tv-grille" id="grilleLive"></div>
+  </section>
+  <section class="tv-groupe" id="groupeHors" hidden>
+    <h2>Hors ligne <span class="tv-compte" id="compteHors"></span></h2>
+    <div class="tv-grille" id="grilleHors"></div>
+  </section>
+</main>
+
+<section class="partners" aria-label="Partenaires"><div class="partner-row" id="partners"></div></section>
+<footer class="foot">
+  <div class="foot-grid">
+    <div><img class="foot-logo" id="logo2" alt="GTQC"><p class="small">Gran Turismo Québec · Communauté de sim racing 100 % québécoise</p></div>
+    <div><h3>Soir de course</h3><div id="horaire"></div></div>
+    <div><h3>Suivre la ligue</h3><ul class="links" id="links"></ul><p class="mail" id="mail"></p></div>
+  </div>
+  <p class="small copy">Maquette, octobre 2026 · Directs : Twitch</p>
+</footer>
+
+<script src="chargeur.js" data-scripts="commun.js tv.js"></script>
+</body>

@@ -1,0 +1,74 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GTQC Rejoindre</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Joindre la ligue GTQC, devenir pilote de réserve ou poser une question à l'organisation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<header class="topbar solid" id="topbar">
+  <a class="brand" href="index.html" aria-label="GTQC, accueil"><img id="logo" alt="GTQC"></a>
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="index.html">Courses</a>
+    <a href="pilotes.html">Pilotes</a>
+    <a href="#">Team</a>
+    <a href="#">Événements</a>
+    <a href="reglements.html">Règlements</a>
+    <a href="tv.html">GTQC TV</a>
+    <a href="rejoindre.html" aria-current="page">Rejoindre</a>
+  </nav>
+  <button class="menu-btn" type="button" aria-label="Menu"><span aria-hidden="true">≡</span> Menu</button>
+</header>
+
+<main class="join-page">
+  <div class="join-intro">
+    <h1 class="dp-title">Rejoindre</h1>
+    <p class="rp-intro">Une seule demande, trois possibilités : prendre le départ avec la ligue, rester prêt comme pilote de réserve, ou simplement nous écrire. L'administration répond sur Discord ou par courriel.</p>
+    <ul class="join-facts" id="facts"></ul>
+  </div>
+
+  <form class="join-form" id="form" novalidate>
+    <fieldset class="join-types">
+      <legend>Je veux…</legend>
+      <label><input type="radio" name="type" value="ligue" checked><span><b>Joindre la ligue</b><small>Pilote titulaire, placé dans un lobby après les tryouts</small></span></label>
+      <label><input type="radio" name="type" value="reserve"><span><b>Être pilote de réserve</b><small>Appelé quand un titulaire est absent</small></span></label>
+      <label><input type="radio" name="type" value="question"><span><b>Poser une question</b><small>Partenariat, diffusion, autre</small></span></label>
+    </fieldset>
+    <p class="join-closed" id="closed" hidden></p>
+
+    <div class="join-grid">
+      <label><span>Pseudo Discord <b class="req">*</b></span><input name="pseudo_discord" autocomplete="nickname" maxlength="60" required></label>
+      <label><span>Courriel <b class="req">*</b></span><input name="courriel" type="email" autocomplete="email" maxlength="120" required></label>
+      <label data-pilote><span>Identifiant PSN <b class="req">*</b></span><input name="psn" maxlength="40" autocomplete="off"></label>
+      <label data-pilote>Région<input name="region" maxlength="60" placeholder="ex. Montréal, Québec, Saguenay"></label>
+      <label data-pilote>Contrôle<select name="controle"><option value="">Choisir</option><option>Volant</option><option>Manette</option></select></label>
+      <label data-pilote>Driver Rating (GT7)<select name="driver_rating"><option value="">Choisir</option><option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select></label>
+      <label data-pilote class="wide">Chaîne Twitch (facultatif)<input name="twitch" maxlength="80" placeholder="twitch.tv/ton_nom : tes directs apparaîtront sur GTQC TV"></label>
+      <label data-pilote class="wide">Disponibilités<input name="disponibilites" maxlength="300" placeholder="ex. tous les dimanches soir, sauf en décembre"></label>
+      <label data-pilote class="wide">Expérience en course<textarea name="experience" rows="3" maxlength="600" placeholder="Autres ligues, championnats, Sport mode…"></textarea></label>
+      <label class="wide">Message<textarea name="message" rows="4" maxlength="2000" id="message"></textarea></label>
+      <!-- Piège à robots : invisible pour les humains -->
+      <label class="hp" aria-hidden="true">Site web<input name="site" tabindex="-1" autocomplete="off"></label>
+    </div>
+
+    <label class="join-consent"><input type="checkbox" name="consentement" required><span>J'accepte que ces informations servent seulement à l'administration de la GTQC. Seul mon pseudo pourra être affiché sur le site.</span></label>
+    <div class="join-actions">
+      <button class="pill-btn" type="submit" id="send">Envoyer la demande</button>
+      <p class="join-status" id="status" role="status" aria-live="polite"></p>
+    </div>
+  </form>
+</main>
+
+<section class="partners" aria-label="Partenaires"><div class="partner-row" id="partners"></div></section>
+<footer class="foot">
+  <div class="foot-grid">
+    <div><img class="foot-logo" id="logo2" alt="GTQC"><p class="small">Gran Turismo Québec · Communauté de sim racing 100 % québécoise</p></div>
+    <div><h3>Soir de course</h3><div id="horaire"></div></div>
+    <div><h3>Suivre la ligue</h3><ul class="links" id="links"></ul><p class="mail" id="mail"></p></div>
+  </div>
+  <p class="small copy">Maquette, octobre 2026</p>
+</footer>
+
+<script src="chargeur.js" data-scripts="commun.js rejoindre.js"></script>

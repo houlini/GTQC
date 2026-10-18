@@ -83,7 +83,7 @@
       <div class="when">${esc(G.fmtLong.format(G.asDate(m.date)))}${m.date_fin ? " au " + esc(G.fmtLong.format(G.asDate(m.date_fin))) : ""}${m.type !== "Tryout" ? " · " + esc(G.hm(G.startOf(m))) : ""}</div>
       ${extra}
       <div class="ctas"><button class="pill-btn" type="button" id="openDrawer">${res.length ? "Voir les résultats" : "Voir la manche"}</button>
-      ${G.cfg.twitch_url ? `<a class="pill-btn ghost" href="${esc(G.cfg.twitch_url)}" target="_blank" rel="noopener">${over ? "Revoir sur Twitch" : "Regarder sur Twitch"}</a>` : ""}</div>`;
+      ${(() => { const v = G.vods(m.course_id)[0]; return v ? `<a class="pill-btn ghost" href="${esc(v.url)}" target="_blank" rel="noopener">Revoir la course</a>` : ""; })()}</div>`;
     $("openDrawer").addEventListener("click", openDrawer);
     clearInterval(timer);
     if ($("count")) {
@@ -106,7 +106,7 @@
       ["Arrêt obligatoire", m.arret_pit_min ? m.arret_pit_min + " arrêt" : ""], ["Carburant au départ", m.carburant_initial_l ? m.carburant_initial_l + " L" : ""],
       ["Ravitaillement", m.ravitaillement], ["Temps au stand", m.temps_pit_s ? "≈ " + m.temps_pit_s + " s" : ""]].filter(x => x[1]);
     const cars = D.Voitures.filter(v => v.saison_id === season && v.groupe === m.groupe_voiture).map(v => v.voiture);
-    const res = G.results(m.course_id), pen = G.pens(m.course_id);
+    const res = G.results(m.course_id), pen = G.pens(m.course_id), vodList = G.vods(m.course_id);
     const cats = D.Manches_Categories.filter(x => x.course_id === m.course_id);
     const ids = [...new Set([...cats.map(x => x.categorie_id || ""), ...res.map(r => r.categorie_id || "")])];
     const cards = ids.map(cat => {
@@ -126,6 +126,8 @@
       ${src ? `<div class="dr-trace"><img src="${src}" alt="Tracé de ${esc(c.nom)}"></div>` : ""}
       ${stats.length ? `<div class="stats">${stats.map(s => `<div><b>${esc(String(s[1]).replace(".", ","))}</b><span>${s[0]}</span></div>`).join("")}</div>` : ""}
       ${kv.length ? `<dl class="kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
+      ${m.reglages_caches ? `<p class="secret">Réglages de course dévoilés ${m.reglages_reveles_le ? "le " + esc(G.fmtLong.format(G.asDate(m.reglages_reveles_le))) : "quelques jours avant la manche"}.</p>` : ""}
+      ${vodList.length ? `<div class="vods"><h3>Revoir la course</h3>${vodList.map(v => `<a class="vod ${v.plateforme.toLowerCase()}" href="${esc(v.url)}" target="_blank" rel="noopener"><span>${esc(v.plateforme)}</span>${esc(v.titre || (v.categorie_id ? "Division " + v.categorie_id.slice(1) : "Rediffusion"))}</a>`).join("")}</div>` : ""}
       ${cars.length ? `<p class="muted">Voitures permises : ${cars.map(esc).join(", ")}</p>` : ""}
       ${m.note_publique ? `<p class="muted">${esc(m.note_publique)}</p>` : ""}
       <div class="cards">${cards}</div>`;

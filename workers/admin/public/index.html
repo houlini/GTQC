@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>GTQC Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<header class="adm-top">
+  <div class="adm-brand"><b>GTQC</b> Admin</div>
+  <nav class="adm-tabs" id="tabs" aria-label="Sections">
+    <button type="button" data-tab="manches">Manches</button>
+    <button type="button" data-tab="resultats">Résultats</button>
+    <button type="button" data-tab="grille">Grille</button>
+    <button type="button" data-tab="reserves">Réserves</button>
+    <button type="button" data-tab="pilotes">Pilotes</button>
+    <button type="button" data-tab="vods">VOD</button>
+    <button type="button" data-tab="inscriptions">Inscriptions <span class="adm-count" id="nbInscr"></span></button>
+    <button type="button" data-tab="journal">Journal</button>
+  </nav>
+  <div class="adm-moi" id="moi"></div>
+</header>
+<div class="adm-demo" id="demo" hidden>Mode démo (local) : données du dépôt, rien n'est enregistré.</div>
+<main class="adm" id="main"><p class="muted">Chargement…</p></main>
+<div class="adm-toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="admin.js"></script>
+</body>
+</html>

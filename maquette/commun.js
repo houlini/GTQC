@@ -2,6 +2,8 @@
    Les données viennent de data.js (export du Google Sheet). */
 window.GT = (() => {
   const D = window.GTQC;
+  // Onglets ajoutés pour l'admin : absents des anciens exports
+  for (const k of ["Vods", "Grilles", "Remplacements"]) D[k] = D[k] || [];
   const IMG = /\/maquette\//.test(location.pathname) || location.protocol === "file:" ? "../assets/img/" : "assets/img/";
   const yes = v => v === true || v === "TRUE";
   const no = v => v === false || v === "FALSE";
@@ -61,6 +63,9 @@ window.GT = (() => {
   const startOf = (m, cat = "D2") => (D.Manches_Categories.find(x => x.course_id === m.course_id && x.categorie_id === cat) || {}).heure_depart || m.heure || "19:00";
   const label = m => m.type === "Tryout" ? "Tryouts" : m.type === "Spéciale" ? "Course ouverte au public" : m.type === "Finale" ? `Manche ${m.manche} · Finale` : `Manche ${m.manche}`;
   const hm = h => String(h).replace(":", " h ");
+  /** Rediffusions d'une manche (onglet Vods, géré dans l'admin) : YouTube ou Twitch. */
+  const vods = cid => D.Vods.filter(v => v.course_id === cid && v.url && !no(v.publier)).sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
+    .map(v => ({ ...v, plateforme: v.plateforme || (/youtu\.?be/i.test(v.url) ? "YouTube" : /twitch\.tv/i.test(v.url) ? "Twitch" : "Vidéo") }));
 
   // ---------- Points et classement
   const roundPts = (id, cid) => {
@@ -88,6 +93,9 @@ window.GT = (() => {
   /** Pilotes classés pour le graphique / les rangs : saison en cours = tous ; archives = rang officiel numérique (sans host ni réserves). */
   const eligible = s => isCurrent(s) ? null : new Set(official(s).filter(r => /^\d+$/.test(String(r.rang))).map(r => r.id));
   const lastLobby = (id, s) => {
+    // Grille publiée par l'admin (aux 2 manches) : elle prime sur le lobby de la dernière course
+    const g = D.Grilles.filter(x => x.saison_id === s && x.pilote_id === id).sort((a, b) => (b.a_partir_de || 0) - (a.a_partir_de || 0))[0];
+    if (g && g.categorie_id) return g.categorie_id;
     let c = "";
     for (const m of done(s)) for (const r of results(m.course_id)) if (r.pilote_id === id && r.categorie_id) c = r.categorie_id;
     return c;
@@ -138,14 +146,13 @@ window.GT = (() => {
     // Sur fond marine : version sans fond blanc, avec halo jaune (outils/logo_gtqc_fonce.py)
     $("logo").src = IMG + (cfg.logo_fond_fonce || "logo/gtqc-logo-fonce.png");
     if ($("logo2")) $("logo2").src = $("logo").src;
-    if (cfg.twitch_url) $("twitchTop").href = cfg.twitch_url; else $("twitchTop").hidden = true;
     if ($("partners")) $("partners").innerHTML = D.Sponsors.filter(s => yes(s.afficher)).sort((a, b) => a.ordre - b.ordre).map(s => {
       const logo = s.logo_fond_fonce || s.logo;
       const inner = logo ? `<img src="${IMG + esc(logo)}" alt="${esc(s.nom)}">` : `<span class="txt">${esc(s.nom)}</span>`;
       return s.site_web ? `<a href="${esc(s.site_web)}" target="_blank" rel="noopener" title="${esc(s.nom)}">${inner}</a>` : `<span title="${esc(s.nom)}">${inner}</span>`;
     }).join("");
     if ($("horaire")) $("horaire").innerHTML = ["D2", "D1"].map(cat => `<div class="sched-h">Lobby ${cat.slice(1)}</div><dl class="sched">${(D.Horaire || []).filter(h => h.categorie_id === cat).sort((a, b) => a.ordre - b.ordre).map(h => `<dt>${esc(String(h.heure))}</dt><dd>${esc(h.etape)}${h.duree ? " (" + esc(h.duree) + ")" : ""}</dd>`).join("")}</dl>`).join("");
-    if ($("links")) $("links").innerHTML = [["Facebook", cfg.facebook_url], ["Instagram", cfg.instagram_url], ["Twitch", cfg.twitch_url], ["YouTube", cfg.youtube_url]].filter(l => l[1]).map(([n, u]) => `<li><a href="${esc(u)}" target="_blank" rel="noopener">${n}</a></li>`).join("");
+    if ($("links")) $("links").innerHTML = [["Facebook", cfg.facebook_url], ["Instagram", cfg.instagram_url], ["YouTube", cfg.youtube_url]].filter(l => l[1]).map(([n, u]) => `<li><a href="${esc(u)}" target="_blank" rel="noopener">${n}</a></li>`).join("");
     if ($("mail")) $("mail").textContent = cfg.courriel_contact || "";
     const bar = $("topbar"); const onScroll = () => bar.classList.toggle("solid", scrollY > 40);
     addEventListener("scroll", onScroll, { passive: true }); onScroll();
@@ -162,9 +169,36 @@ window.GT = (() => {
     btn.addEventListener("click", () => setOpen(!bar.classList.contains("open")));
     nav.addEventListener("click", e => { if (e.target.closest("a")) setOpen(false); });
     addEventListener("keydown", e => { if (e.key === "Escape") setOpen(false); });
+    liveBar();
+  }
+
+  // ---------- Bandeau « en direct » : pilotes qui diffusent avec le tag GTQC pendant une soirée de course.
+  // Source : API /twitch (Worker gtqc-api, clés Twitch côté serveur). Pas d'API = pas de bandeau.
+  const API = window.GTQC_API || cfg.api_url || "";
+  async function twitchStatus() {
+    const rep = await fetch(API + "/twitch", { cache: "no-store" });
+    return rep.json();
+  }
+  function liveBar() {
+    if (!API || document.body.dataset.page === "tv") return;
+    const bar = document.createElement("a");
+    bar.className = "live-bar"; bar.href = "tv.html"; bar.hidden = true;
+    $("topbar").after(bar);
+    const refresh = async () => {
+      try {
+        const d = await twitchStatus();
+        const live = (d.chaines || []).filter(c => c.live && c.gtqc).sort((a, b) => (b.spectateurs || 0) - (a.spectateurs || 0));
+        bar.hidden = !(d.pendant_course && live.length);
+        if (bar.hidden) return;
+        const noms = live.slice(0, 3).map(c => esc(c.pseudo || c.chaine)).join(", ") + (live.length > 3 ? ` +${live.length - 3}` : "");
+        bar.innerHTML = `<span class="live-dot" aria-hidden="true"></span><b>En direct</b><span class="live-names">${noms}</span><span class="live-cta">Regarder sur GTQC TV ›</span>`;
+      } catch (err) { bar.hidden = true; }
+    };
+    refresh();
+    setInterval(() => { if (!document.hidden) refresh(); }, 60000);
   }
 
   return { D, IMG, yes, no, cfg, circuits, gt7, pilots, teams, $, esc, name, asDate, fmtLong, fmtShort, fmtMon, COLORS, num, flag,
     seasons, current, isCurrent, rounds, counted, results, pens, done, pilotRounds, isPast, nextRound, circ, layout, traceSrc,
-    startOf, label, hm, roundPts, totals, ranked, official, standings, positions, teamOf, pilotStats, seasonsOf, chrome };
+    startOf, label, hm, roundPts, totals, ranked, official, standings, positions, teamOf, pilotStats, seasonsOf, chrome, vods, API, twitchStatus };
 })();

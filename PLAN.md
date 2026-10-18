@@ -42,13 +42,22 @@ Le style s'inspire de la page Courses de Red Bull Racing (https://www.redbullrac
 
 Site en **français seulement**, à l'adresse GitHub Pages gratuite. Liens : Facebook, Instagram, Twitch ; contact gtqc.club@gmail.com.
 
-## 3. Architecture technique (proposition)
+## 3. Architecture technique (retenue le 18 oct. 2026, même recette que LNHQ)
 
-- **Données** : le Google Sheet *public* est publié avec *Fichier → Partager → Publier sur le Web* (CSV par onglet).
-- **Site** : site statique (recommandation : **Astro**) hébergé sur **GitHub Pages**.
-- **Mise à jour** : une GitHub Action relit le Sheet et reconstruit le site automatiquement (ex. toutes les 30 min,
-  ou un bouton « Run workflow » le soir de course).
+- **Données** : le Google Sheet reste **privé**. La seule porte d'entrée est l'Apps Script `apps-script/gtqc.gs`
+  (exécuté avec le compte propriétaire). Il publie les onglets publics, **sans les réglages des prochaines manches**
+  (dévoilés `Config.reglages_jours_avant` jours avant, ou selon `Manches.reglages_visibles`). Les onglets `_…`
+  (`_Inscriptions`, `_Admins`, `_Journal`) ne sont jamais publiés.
+- **API publique** : Worker Cloudflare `workers/api` (`api.<domaine>`) : `/donnees`, `/twitch` (GTQC TV) et
+  `/inscription` (formulaire Rejoindre). Les clés Twitch et le code du script restent côté serveur.
+- **Admin** : Worker `workers/admin` (`admin.<domaine>`), derrière **Cloudflare Access** (code par courriel). Seuls les
+  courriels de `_Admins` peuvent écrire. Il gère les manches, les résultats (collés ou en fichier, points calculés avec
+  le barème), les pénalités, la grille des lobbys aux 2 manches, les réserves et absences, les pilotes (Twitch compris),
+  les VOD et les inscriptions.
+- **Site** : statique (GitHub Pages). `maquette/chargeur.js` lit l'API, ou `data.js` (export de secours) tant que
+  l'API n'est pas en ligne.
 - **Classements calculés par le site** à partir de `Resultats` + `Penalites`, pour éviter les erreurs de formules à la main.
+- **Domaine** : pas encore décidé. Mise en ligne détaillée dans le [README](README.md#mise-en-ligne).
 
 ### Saisie des résultats par capture d'écran (demandé par le gestionnaire)
 
@@ -182,6 +191,10 @@ import seulement ; les relancer ne met pas le Google Sheet à jour.
 - Logo d'EuroKart, et plus tard de la Team (logos Vacecraft et Cardinal Club reçus) ; logos des équipes S1 manquantes
   (Team Rocket, Reserve Drivers, Euro Racing Team, Apex Racing Team).
 - Avatars des pilotes (plus tard).
+- Domaine du site (puis mise en ligne de l'API et de l'admin) ; chaînes Twitch des pilotes (`Pilotes.twitch`).
+- Lecture automatique des captures de résultats GT7 (voir plus haut) : l'admin accepte pour l'instant une liste
+  collée ou un fichier CSV/texte. Il faudra une table PSN → pilote dans le classeur privé.
+- Les courses de la ligue sont diffusées sur une autre chaîne : `Config.twitch_url` n'est plus affiché sur le site.
 - Réglé (S1) : le tableau « ENTRER POINTS ICI » contient les points marqués par les remplaçants. Ces points comptent
   pour l'équipe, mais pas pour le pilote remplacé. Les points par pilote du classement officiel sont donc les bons
   (inchangés dans `Resultats`), et le total des équipes inclut les remplaçants (noté dans `Classement_Final` et `Saisons`).

@@ -1,0 +1,23 @@
+name = "gtqc-admin"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# Admin GTQC : joignable seulement par admin.DOMAINE, derrière Cloudflare Access
+# (l'adresse *.workers.dev permettrait de contourner Access, d'où workers_dev = false).
+# Remplacer DOMAINE par le domaine choisi avant le premier déploiement.
+workers_dev = false
+preview_urls = false
+routes = [{ pattern = "admin.DOMAINE", custom_domain = true }]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[vars]
+# Zero Trust → Access → Applications → (l'application admin GTQC) → Vue d'ensemble.
+ACCESS_TEAM_DOMAIN = "https://EQUIPE.cloudflareaccess.com"
+ACCESS_AUD = ""
+
+# Secrets (jamais dans ce fichier), mêmes valeurs que pour gtqc-api :
+#   npx wrangler secret put SCRIPT_URL
+#   npx wrangler secret put SCRIPT_SECRET
