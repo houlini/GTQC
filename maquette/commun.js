@@ -148,6 +148,19 @@ window.GT = (() => {
     if ($("mail")) $("mail").textContent = cfg.courriel_contact || "";
     const bar = $("topbar"); const onScroll = () => bar.classList.toggle("solid", scrollY > 40);
     addEventListener("scroll", onScroll, { passive: true }); onScroll();
+    // Menu mobile : le bouton ouvre la navigation en panneau sous l'en-tête
+    const btn = bar.querySelector(".menu-btn"), nav = bar.querySelector(".nav");
+    nav.id = nav.id || "mainNav";
+    btn.setAttribute("aria-controls", nav.id);
+    const setOpen = open => {
+      bar.classList.toggle("open", open);
+      btn.setAttribute("aria-expanded", open);
+      btn.innerHTML = open ? '<span aria-hidden="true">×</span> Fermer' : '<span aria-hidden="true">≡</span> Menu';
+    };
+    setOpen(false);
+    btn.addEventListener("click", () => setOpen(!bar.classList.contains("open")));
+    nav.addEventListener("click", e => { if (e.target.closest("a")) setOpen(false); });
+    addEventListener("keydown", e => { if (e.key === "Escape") setOpen(false); });
   }
 
   return { D, IMG, yes, no, cfg, circuits, gt7, pilots, teams, $, esc, name, asDate, fmtLong, fmtShort, fmtMon, COLORS, num, flag,
