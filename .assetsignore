@@ -1,0 +1,23 @@
+# Fichiers envoyés à Cloudflare pour le site : seulement maquette/ et assets/ (le Worker ne sert rien d'autre)
+.git
+.claude
+.wrangler
+node_modules
+_prive
+Photos
+apps-script
+workers
+outils
+database
+/site
+*.md
+*.txt
+*.py
+*.ps1
+*.toml
+*.jsonc
+.gitignore
+.gitattributes
+.assetsignore
+/index.html
+/GTQC

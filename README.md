@@ -50,5 +50,7 @@ Domaine : **gtqc.net** (zone Cloudflare). À faire une fois :
    « courriels » avec les admins. Copie le domaine d'équipe et l'AUD dans `workers/admin/wrangler.toml`.
 5. **Worker admin** (`workers/admin`) : `npx wrangler secret put SCRIPT_URL` et `SCRIPT_SECRET`, puis `npx wrangler deploy`.
    Pour lire les captures de résultats GT7 : `npx wrangler secret put GEMINI_KEY` (clé gratuite sur aistudio.google.com).
-6. **Site** : l'API `https://api.gtqc.net` est déjà dans `maquette/chargeur.js` et `Config.api_url` ; tant qu'elle
+6. **Site** : Worker « gtqc » relié au dépôt GitHub (Workers Builds) : chaque Push le redéploie avec `wrangler.jsonc`.
+   `site/worker.js` sert `maquette/` à la racine (gtqc.net/pilotes.html) et `assets/`, rien d'autre du dépôt.
+   L'API `https://api.gtqc.net` est déjà dans `maquette/chargeur.js` et `Config.api_url` ; tant qu'elle
    ne répond pas, le site lit `data.js`. Les admins sont listés dans l'onglet `_Admins` (colonne `actif`).
