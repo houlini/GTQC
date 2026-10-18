@@ -11,8 +11,7 @@
 
   // Repères tirés du Sheet (jour de course, frais, plateforme)
   const facts = [["Plateforme", G.cfg.plateforme && !/confirmer/i.test(G.cfg.plateforme) ? G.cfg.plateforme : "PlayStation 5 · Gran Turismo 7"],
-    ["Soir de course", [G.cfg.jour_course, G.cfg.heure_course && "dès " + G.hm(G.cfg.heure_course)].filter(Boolean).join(" ")],
-    ["Lobbys", "2 lobbys, révisés aux 2 manches"]].filter(f => f[1]);
+    ["Soir de course", [G.cfg.jour_course, G.cfg.heure_course && "dès " + G.hm(G.cfg.heure_course)].filter(Boolean).join(" ")]].filter(f => f[1]);
   $("facts").innerHTML = facts.map(([k, v]) => `<li><span>${esc(k)}</span><b>${esc(v)}</b></li>`).join("");
 
   const ouverte = G.yes(G.cfg.inscription_ouverte);
