@@ -232,3 +232,76 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
   .rows li.lead .p, .rows li.lead .n { font-size: 22px; }
 }
 @media (prefers-reduced-motion: reduce) { .rail li, .hero-bg, .drawer-panel { transition: none; animation: none; } }
+
+/* ---------- Page Pilotes (cartes inspirées de la page Drivers de Red Bull) */
+.drivers-page { padding: 110px calc(var(--gutter-r) + 48px) 40px calc(var(--gutter-l) + 48px); min-height: 70vh; }
+.dp-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; margin-bottom: 32px; }
+.dp-title { margin: 0; font-size: clamp(56px, 9vw, 120px); font-weight: 800; line-height: .9; letter-spacing: -.02em; }
+.dp-filters { display: grid; gap: 12px; justify-items: end; }
+.season-switch.inline { position: static; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chips button { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 14px; color: var(--muted); cursor: pointer; }
+.chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.dgrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+.dcard {
+  position: relative; display: grid; grid-template-rows: 1fr auto auto; aspect-ratio: 3 / 4; max-width: 100%; overflow: hidden; isolation: isolate;
+  border-radius: 14px; padding: 20px; text-decoration: none; background: linear-gradient(160deg, var(--c1) 0%, var(--c2) 100%);
+  transition: transform .2s, box-shadow .2s;
+}
+.dcard:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+.dcard.t-D1 { --c1: #2B3A10; --c2: #0E1A12; }
+.dcard.t-D2 { --c1: #0D2C7A; --c2: #071437; }
+.dcard.t-R, .dcard.t-x { --c1: #22304A; --c2: #0E1626; }
+.dnum { position: absolute; top: 8px; left: 16px; z-index: -1; font-size: 120px; font-weight: 800; line-height: 1; color: transparent; -webkit-text-stroke: 2px rgba(255,255,255,.18); }
+.helmet { width: 78%; max-width: 230px; justify-self: center; align-self: end; filter: drop-shadow(0 10px 24px rgba(0,0,0,.45)); }
+.dinfo { display: grid; gap: 2px; margin-top: 14px; }
+.dname { font-size: 26px; font-weight: 800; line-height: 1.05; overflow-wrap: anywhere; }
+.dmeta { color: var(--muted); font-size: 14px; font-weight: 500; }
+.dpts { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+.dpts b { color: var(--ink); font-size: 20px; }
+.dp-note { color: var(--muted); font-size: 14px; margin: 28px 0 0; }
+.plink { text-decoration: none; }
+.plink:hover { color: var(--accent); }
+
+/* Fiche pilote */
+.back { display: inline-block; text-decoration: none; color: var(--muted); font-weight: 600; margin-bottom: 18px; }
+.back:hover { color: var(--accent); }
+.pd-hero { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 36px; align-items: center; padding: 28px; border-radius: 16px; background: linear-gradient(120deg, var(--c1), var(--c2)); }
+.pd-hero.t-D1 { --c1: #2B3A10; --c2: #00162B; }
+.pd-hero.t-D2 { --c1: #0D2C7A; --c2: #00162B; }
+.pd-hero.t-R, .pd-hero.t-x { --c1: #22304A; --c2: #00162B; }
+.pd-avatar { position: relative; display: grid; place-items: center; aspect-ratio: 1; max-width: 100%; border-radius: 50%; background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.12), rgba(255,255,255,0) 70%); }
+.pd-avatar .helmet { width: 72%; margin-bottom: 14%; }
+.pd-soon { position: absolute; bottom: 9%;font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.pd-id { display: grid; gap: 14px; min-width: 0; }
+.pd-rank { color: var(--accent); font-weight: 700; font-size: 18px; }
+.pd-id h1 { margin: 0; font-size: clamp(44px, 7vw, 92px); font-weight: 800; line-height: .95; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.pd-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pd-chips span { background: rgba(255,255,255,.12); border-radius: 999px; padding: 5px 12px; font-weight: 600; font-size: 14px; }
+.sboxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin: 28px 0; }
+.sbox { background: var(--navy); padding: 18px; display: grid; gap: 4px; }
+.sbox b { font-size: 34px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.sbox span { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; }
+.pd-block { display: grid; gap: 14px; margin-bottom: 32px; }
+.pd-block h2 { font-size: 30px; }
+.spark { width: 100%; max-width: 640px; height: auto; }
+.spark text { fill: var(--muted); font-family: var(--font); font-size: 12px; }
+.spark .end { fill: var(--accent); font-weight: 700; font-size: 14px; }
+.table-wrap { overflow-x: auto; }
+.rtable { width: 100%; border-collapse: collapse; font-size: 15px; }
+.rtable th { text-align: left; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.rtable td { padding: 12px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.rtable .num { text-align: right; font-variant-numeric: tabular-nums; }
+.rtable .b { font-weight: 700; }
+.rtable tr.nc td { opacity: .6; }
+.small { font-size: 13px; }
+@media (max-width: 860px) {
+  .drivers-page { padding: 96px var(--gutter-r) 32px var(--gutter-l); }
+  .dp-filters { justify-items: start; }
+  .dgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .dcard { padding: 14px; }
+  .dname { font-size: 18px; }
+  .dnum { font-size: 76px; }
+  .pd-hero { grid-template-columns: 1fr; padding: 20px; gap: 16px; }
+  .pd-avatar { width: 60%; justify-self: center; }
+}

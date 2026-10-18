@@ -191,3 +191,19 @@ import seulement ; les relancer ne met pas le Google Sheet à jour.
 - Réglé : Lake Louise = Long Track ; « Misha S13 » = S-TH1RT3EN ; l'affiche avec le casque n'est plus attribuée à une équipe.
   Détails S1 ajoutés : départ 19 h, nombre de tours, conditions, Subaru Impreza Gr.B pour le rallye de nuit à Lake Louise.
 - Le pilote « Vicecraft » (fiche Vincent Vicecraft) n'a pas de pseudo Discord connu : le site affiche « Vicecraft » pour l'instant.
+
+### Vérification du 18 oct. 2026
+
+- **Dates S02 corrigées** d'après [Gridfinder](https://www.gridfinder.com/c/gtqc/gtqc-saison-2) (la capture d'origine était un
+  ancien brouillon) : M2 13 sept, M3 27 sept, M5 **18 oct**, M6 1er nov, M8 29 nov. Les autres dates étaient bonnes.
+  Dates S01 vérifiées : identiques à Gridfinder.
+- **Points** : les totaux S02 de la base égalent le Standing officiel pour les 32 pilotes. Les erreurs venaient du graphique
+  (égalités mal gérées ; en S1, manche 10, host et réserves comptés). Corrigé : rangs « denses » comme la ligue (8, 8, 9),
+  colonne `Manches.points_pilotes` (FALSE pour S01-M6 et S01-M10), manches terminées = manches avec résultats saisis.
+- **Règlements S02** (fichier `reglements gtqc.txt`) intégrés dans l'onglet `Reglements` (38 règles en 7 sections), sans les
+  identifiants Discord ni les PSN des admins. Le fichier brut est exclu de Git. Zones de montée/descente ajoutées à `Bareme_Points`.
+- **À confirmer** :
+  - Maggiore (M5) : Gridfinder dit « Center Reverse », le Sheet d'origine dit « Full Reverse ».
+  - Sainte-Croix (M7) : Gridfinder indique 9 h au lieu de 18 h.
+  - Les événements publics (20 sept, 4 oct, 25 oct, 8 nov, 22 nov) tombent en fait les dimanches **sans** course.
+  - Les règlements écrivent le tag « Vacecraft » alors que le nom retenu est « Vicecraft ».

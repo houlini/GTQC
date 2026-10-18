@@ -1,0 +1,54 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GTQC Pilotes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Les pilotes de la ligue Gran Turismo Québec (GTQC) : classement, résultats et statistiques.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<header class="topbar solid" id="topbar">
+  <a class="brand" href="index.html" aria-label="GTQC, accueil"><img id="logo" alt="GTQC"></a>
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="index.html">Courses</a>
+    <a href="pilotes.html" aria-current="page">Pilotes</a>
+    <a href="#">Team</a>
+    <a href="#">Événements</a>
+    <a href="#">Règlements</a>
+    <a id="twitchTop" target="_blank" rel="noopener">Twitch</a>
+  </nav>
+  <button class="menu-btn" type="button" aria-label="Menu"><span aria-hidden="true">≡</span> Menu</button>
+</header>
+
+<main class="drivers-page">
+  <!-- Liste des pilotes -->
+  <section id="listView">
+    <div class="dp-head">
+      <h1 class="dp-title">Pilotes</h1>
+      <div class="dp-filters">
+        <div class="season-switch inline" id="seasonSwitch" role="tablist" aria-label="Saison"></div>
+        <div class="chips" id="filters" role="group" aria-label="Filtrer"></div>
+      </div>
+    </div>
+    <ol class="dgrid" id="grid"></ol>
+    <p class="dp-note">Les avatars arrivent bientôt : en attendant, chaque pilote a un casque aux couleurs de sa division.</p>
+  </section>
+
+  <!-- Fiche d'un pilote -->
+  <section id="detailView" hidden></section>
+</main>
+
+<section class="partners" aria-label="Partenaires"><div class="partner-row" id="partners"></div></section>
+<footer class="foot">
+  <div class="foot-grid">
+    <div><img class="foot-logo" id="logo2" alt="GTQC"><p class="small">Gran Turismo Québec · Communauté de sim racing 100 % québécoise</p></div>
+    <div><h3>Soir de course</h3><div id="horaire"></div></div>
+    <div><h3>Suivre la ligue</h3><ul class="links" id="links"></ul><p class="mail" id="mail"></p></div>
+  </div>
+  <p class="small copy">Maquette, octobre 2026 · Données : Google Sheet GTQC_Base_Donnees</p>
+</footer>
+
+<script src="data.js"></script>
+<script src="commun.js"></script>
+<script src="pilotes.js"></script>
