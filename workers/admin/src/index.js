@@ -8,6 +8,8 @@ const ACTIONS = {
   'POST /api/resultats': 'resultats',
   'POST /api/penalites': 'penalites',
   'POST /api/vods': 'vods',
+  'POST /api/photo': 'photo',
+  'POST /api/photos': 'photos',
   'POST /api/pilote': 'pilote',
   'POST /api/engagement': 'engagement',
   'POST /api/grille': 'grille',
@@ -15,6 +17,8 @@ const ACTIONS = {
   'POST /api/inscription': 'inscription',
 };
 const MAX_OCTETS = 200 * 1024;
+// Une capture par envoi, réduite par le navigateur (base64 : environ 4/3 de l'image)
+const MAX_OCTETS_PHOTO = 9 * 1024 * 1024;
 
 export default {
   async fetch(request, env) {
@@ -33,7 +37,7 @@ export default {
     let corps = '{}';
     if (request.method === 'POST') {
       corps = await request.text();
-      if (corps.length > MAX_OCTETS) return json({ ok: false, erreur: 'taille' }, 413);
+      if (corps.length > (action === 'photo' ? MAX_OCTETS_PHOTO : MAX_OCTETS)) return json({ ok: false, erreur: 'taille' }, 413);
     }
     const r = await script(env, action, courriel, corps);
     return json(r, r.ok ? 200 : r.erreur === 'script' ? 502 : r.erreur === 'admin' ? 403 : 400);

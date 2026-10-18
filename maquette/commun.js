@@ -3,7 +3,7 @@
 window.GT = (() => {
   const D = window.GTQC;
   // Onglets ajoutés pour l'admin : absents des anciens exports
-  for (const k of ["Vods", "Grilles", "Remplacements"]) D[k] = D[k] || [];
+  for (const k of ["Vods", "Photos", "Grilles", "Remplacements"]) D[k] = D[k] || [];
   const IMG = /\/maquette\//.test(location.pathname) || location.protocol === "file:" ? "../assets/img/" : "assets/img/";
   const yes = v => v === true || v === "TRUE";
   const no = v => v === false || v === "FALSE";
@@ -63,6 +63,9 @@ window.GT = (() => {
   const startOf = (m, cat = "D2") => (D.Manches_Categories.find(x => x.course_id === m.course_id && x.categorie_id === cat) || {}).heure_depart || m.heure || "19:00";
   const label = m => m.type === "Tryout" ? "Tryouts" : m.type === "Spéciale" ? "Course ouverte au public" : m.type === "Finale" ? `Manche ${m.manche} · Finale` : `Manche ${m.manche}`;
   const hm = h => String(h).replace(":", " h ");
+  /** Captures d'une manche (onglet Photos, envoyées depuis l'admin, fichiers dans Drive). w = largeur voulue. */
+  const photos = cid => D.Photos.filter(p => p.course_id === cid && p.url && !no(p.publier)).sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
+  const photoSrc = (p, w) => /^https:\/\/lh3\./.test(p.url) ? `${p.url}=w${w}` : p.url;
   /** Rediffusions d'une manche (onglet Vods, géré dans l'admin) : YouTube ou Twitch. */
   const vods = cid => D.Vods.filter(v => v.course_id === cid && v.url && !no(v.publier)).sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
     .map(v => ({ ...v, plateforme: v.plateforme || (/youtu\.?be/i.test(v.url) ? "YouTube" : /twitch\.tv/i.test(v.url) ? "Twitch" : "Vidéo") }));
@@ -200,5 +203,5 @@ window.GT = (() => {
 
   return { D, IMG, yes, no, cfg, circuits, gt7, pilots, teams, $, esc, name, asDate, fmtLong, fmtShort, fmtMon, COLORS, num, flag,
     seasons, current, isCurrent, rounds, counted, results, pens, done, pilotRounds, isPast, nextRound, circ, layout, traceSrc,
-    startOf, label, hm, roundPts, totals, ranked, official, standings, positions, teamOf, pilotStats, seasonsOf, chrome, vods, API, twitchStatus };
+    startOf, label, hm, roundPts, totals, ranked, official, standings, positions, teamOf, pilotStats, seasonsOf, chrome, vods, photos, photoSrc, API, twitchStatus };
 })();

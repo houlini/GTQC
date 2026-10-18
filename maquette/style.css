@@ -515,3 +515,25 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
   .join-form { padding: 18px; }
   .join-types, .join-grid { grid-template-columns: 1fr; }
 }
+
+/* Captures d'une manche (panneau) et visionneuse */
+.shots { display: grid; gap: 8px; }
+.shots h3 { margin: 0; font-size: 18px; }
+.shots h3 small { color: var(--muted); font-weight: 500; }
+.shot-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.shot { padding: 0; border: 0; border-radius: 8px; overflow: hidden; cursor: zoom-in; background: #000; aspect-ratio: 16 / 9; }
+.shot img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .25s; }
+.shot:hover img { transform: scale(1.05); }
+.viewer { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: rgba(0,0,0,.94); color: #fff; }
+.viewer[open] { display: grid; place-items: center; }
+.viewer::backdrop { background: rgba(0,0,0,.8); }
+.viewer figure { margin: 0; display: grid; gap: 10px; justify-items: center; max-width: 92vw; }
+.viewer img { max-width: 92vw; max-height: 82dvh; object-fit: contain; border-radius: 6px; }
+.viewer figcaption { color: var(--muted); font-size: 14px; }
+.v-close, .v-nav { position: fixed; border: 0; background: rgba(255,255,255,.12); color: #fff; width: 48px; height: 48px; border-radius: 50%; font-size: 28px; cursor: pointer; line-height: 1; }
+.v-close { top: 16px; right: 16px; }
+.v-nav { top: 50%; transform: translateY(-50%); }
+.v-nav.prev { left: 16px; }
+.v-nav.next { right: 16px; }
+.v-close:hover, .v-nav:hover { background: var(--accent); color: var(--accent-ink); }
+@media (max-width: 600px) { .shot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .v-nav { top: auto; bottom: 16px; transform: none; } }

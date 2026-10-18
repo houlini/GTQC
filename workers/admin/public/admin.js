@@ -33,7 +33,7 @@
       await new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "../../../maquette/data.js"; s.onload = ok; s.onerror = ko; document.head.append(s); });
       D = window.GTQC; demo = true; $("demo").hidden = false; $("moi").textContent = "démo";
     }
-    for (const k of ["Vods", "Grilles", "Remplacements", "_Inscriptions", "_Journal", "Engagements", "Penalites", "Manches_Categories"]) D[k] = D[k] || [];
+    for (const k of ["Vods", "Photos", "Grilles", "Remplacements", "_Inscriptions", "_Journal", "Engagements", "Penalites", "Manches_Categories"]) D[k] = D[k] || [];
     saison = saison || cfg().saison_courante || "S02";
     return true;
   }
@@ -320,6 +320,72 @@
         <div class="adm-actions"><button type="button" class="btn ghost" id="ajVod">+ Lien</button><button type="button" class="btn" id="saveVod">Enregistrer</button></div></div>`;
   }
 
+  /* ---------- Captures des manches (jeu ou diffusion) ---------- */
+  const srcPhoto = (p, w) => /^https:\/\/lh3\./.test(p.url) ? `${p.url}=w${w}` : p.url;
+  function vuePhotos() {
+    const ms = manches();
+    const m = D.Manches.find(x => x.course_id === ui.ph) || ms.filter(x => x.statut === "Terminée" || resultatsDe(x.course_id).length).pop() || ms[0];
+    if (!m) return "<p>Aucune manche.</p>";
+    ui.ph = m.course_id;
+    if (!ui.phB || ui.phB.cle !== m.course_id) ui.phB = { cle: m.course_id, lignes: D.Photos.filter(p => p.course_id === m.course_id).sort((a, b) => a.ordre - b.ordre).map(p => ({ ...p })) };
+    const compte = ms.map(x => [x, D.Photos.filter(p => p.course_id === x.course_id).length]);
+    return `<div class="adm-head"><h1>Captures <small>${esc(saison)}</small></h1><div class="adm-actions">${choixSaison()}<select id="phManche">${optManches(m.course_id)}</select></div></div>
+      <p class="muted">Captures du jeu (photo mode, podium, écran des résultats) ou de la diffusion. Elles s'affichent dans la fiche de la manche sur le site. Les images sont réduites à 1920 px avant l'envoi et rangées dans le dossier Drive « GTQC — Captures des manches ».</p>
+      <p class="muted">${compte.map(([x, n]) => `<button type="button" class="lien${x.course_id === m.course_id ? " on" : ""}" data-phm="${esc(x.course_id)}">M${x.manche} (${n})</button>`).join(" ")}</p>
+      <div class="adm-card"><h2>${esc(nomManche(m))}</h2>
+        <div class="adm-actions"><label class="inline">Lobby <select id="phLobby">${options([["D1", "Lobby 1"], ["D2", "Lobby 2"]], ui.phLobby || "", "Les deux")}</select></label>
+          <label class="inline">Source <select id="phSource">${options([["Jeu", "Jeu"], ["Diffusion", "Diffusion"]], ui.phSource || "Jeu")}</select></label></div>
+        <label class="drop" id="drop"><input type="file" id="phFichiers" accept="image/jpeg,image/png,image/webp" multiple hidden>
+          <b>Glisse les captures ici</b><span>ou clique pour les choisir (JPEG, PNG, WebP, plusieurs à la fois)</span></label>
+        <p class="muted" id="phEtat"></p>
+        <div class="ph-grid">${ui.phB.lignes.map((p, i) => `<figure class="ph" data-ph="${i}">
+          <img src="${esc(srcPhoto(p, 480))}" alt="" loading="lazy">
+          <input data-k="legende" value="${esc(p.legende || "")}" placeholder="Légende (facultatif)">
+          <div class="adm-actions"><select data-k="categorie_id">${options([["D1", "Lobby 1"], ["D2", "Lobby 2"]], p.categorie_id, "Les deux")}</select>
+            <label class="check"><input type="checkbox" data-k="publier" ${no(p.publier) ? "" : "checked"}> Visible</label></div>
+          <div class="adm-actions"><button type="button" class="lien" data-phup="${i}" aria-label="Avant">←</button><button type="button" class="lien" data-phdown="${i}" aria-label="Après">→</button>
+            <a class="lien" href="${esc(srcPhoto(p, 1920))}" target="_blank" rel="noopener">Voir</a><button type="button" class="lien" data-phdel="${i}">Retirer</button></div></figure>`).join("") || `<p class="muted">Aucune capture pour cette manche.</p>`}</div>
+        <div class="adm-actions"><button type="button" class="btn" id="savePh">Enregistrer légendes et ordre</button><span class="muted">Une capture retirée va à la corbeille de Drive.</span></div>
+      </div>`;
+  }
+  /** Réduit une image à 1920 px de large au plus, en JPEG (les PNG du jeu sont très lourds). */
+  function reduire(fichier) {
+    return new Promise((ok, ko) => {
+      const img = new Image(), url = URL.createObjectURL(fichier);
+      img.onload = () => {
+        const k = Math.min(1, 1920 / img.naturalWidth), c = document.createElement("canvas");
+        c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        const data = c.toDataURL("image/jpeg", 0.86);
+        ok({ data: data.split(",")[1], mime: "image/jpeg", apercu: data });
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); ko(new Error(fichier.name)); };
+      img.src = url;
+    });
+  }
+  async function envoyerPhotos(fichiers) {
+    const liste = [...fichiers].filter(f => /^image\/(jpeg|png|webp)$/.test(f.type));
+    if (!liste.length) return toast("Choisis des images JPEG, PNG ou WebP.", "err");
+    const etat = $("phEtat"), cid = ui.ph, cat = $("phLobby").value, source = $("phSource").value;
+    let faits = 0;
+    for (const f of liste) {
+      etat.textContent = `Envoi ${faits + 1} / ${liste.length} : ${f.name}`;
+      try {
+        const img = await reduire(f);
+        if (demo) { D.Photos.push({ photo_id: "demo-" + Date.now() + faits, course_id: cid, categorie_id: cat, url: img.apercu, legende: "", ordre: 99, publier: true, source }); faits++; continue; }
+        const rep = await fetch("/api/photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ course_id: cid, categorie_id: cat, source, data: img.data, mime: img.mime }) });
+        const r = await rep.json();
+        if (!r.ok) throw new Error(r.erreur || "erreur");
+        D.Photos.push(r.photo); faits++;
+      } catch (err) { toast(`${f.name} : échec (${err.message})`, "err"); }
+    }
+    ui.phB = null;
+    if (!demo && faits) await charger();
+    render();
+    toast(demo ? `Mode démo : ${faits} capture(s) affichée(s), rien n'est enregistré.` : `${faits} capture(s) ajoutée(s).`, demo ? "warn" : "ok");
+  }
+
   /* ---------- Inscriptions (onglet privé) ---------- */
   function vueInscriptions() {
     const filtre = ui.fi || "actives";
@@ -342,7 +408,7 @@
   }
 
   const choixSaison = () => `<select id="saison">${options(D.Saisons.slice().sort((a, b) => b.saison_id.localeCompare(a.saison_id)).map(s => [s.saison_id, s.nom || s.saison_id]), saison)}</select>`;
-  const VUES = { manches: vueManches, resultats: vueResultats, grille: vueGrille, reserves: vueReserves, pilotes: vuePilotes, vods: vueVods, inscriptions: vueInscriptions, journal: vueJournal };
+  const VUES = { manches: vueManches, resultats: vueResultats, grille: vueGrille, reserves: vueReserves, pilotes: vuePilotes, vods: vueVods, photos: vuePhotos, inscriptions: vueInscriptions, journal: vueJournal };
 
   function render() {
     document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === tab ? "page" : "false"));
@@ -361,6 +427,12 @@
     if (t.id === "resManche") { ui.res = t.value; ui.brouillon = null; return render(); }
     if (t.id === "absManche") { ui.abs = t.value; ui.absBrouillon = null; return render(); }
     if (t.id === "vodManche") { ui.vod = t.value; ui.vodB = null; return render(); }
+    if (t.id === "phManche") { ui.ph = t.value; ui.phB = null; return render(); }
+    if (t.id === "phLobby") { ui.phLobby = t.value; return; }
+    if (t.id === "phSource") { ui.phSource = t.value; return; }
+    if (t.id === "phFichiers" && t.files.length) { envoyerPhotos(t.files); return; }
+    const ph = t.closest("[data-ph]");
+    if (ph && t.dataset.k) { ui.phB.lignes[+ph.dataset.ph][t.dataset.k] = t.type === "checkbox" ? t.checked : t.value; return; }
     if (t.id === "fi") { ui.fi = t.value; return render(); }
     if (t.id === "grilleDe") { ui.grilleDe = Number(t.value) || ""; return; }
     if (t.id === "fichier" && t.files[0]) { t.files[0].text().then(txt => { $("colle").value = txt; $("lireColle").click(); }); return; }
@@ -459,6 +531,12 @@
     if ("pcancel" in d) { ui.pilote = null; return render(); }
     if (t.id === "ajVod") { ui.vodB.lignes.push({ categorie_id: "", titre: "", url: "", publier: true }); return render(); }
     if (d.vdel) { ui.vodB.lignes.splice(+d.vdel, 1); return render(); }
+    if (d.phm) { ui.ph = d.phm; ui.phB = null; return render(); }
+    const P = ui.phB && ui.phB.lignes;
+    if (d.phup) { const i = +d.phup; if (i > 0) [P[i - 1], P[i]] = [P[i], P[i - 1]]; return render(); }
+    if (d.phdown) { const i = +d.phdown; if (i < P.length - 1) [P[i + 1], P[i]] = [P[i], P[i + 1]]; return render(); }
+    if (d.phdel) { if (confirm("Retirer cette capture ? Elle ira à la corbeille de Drive après l'enregistrement.")) { P.splice(+d.phdel, 1); render(); } return; }
+    if (t.id === "savePh") return envoyer("photos", { course_id: ui.ph, lignes: P.map(p => ({ photo_id: p.photo_id, legende: p.legende, categorie_id: p.categorie_id, source: p.source, publier: !no(p.publier) })) }, `Captures ${ui.ph}`);
     if (t.id === "saveVod") {
       const mauvais = ui.vodB.lignes.filter(v => v.url && !/^https:\/\//.test(v.url));
       if (mauvais.length) return toast("Les adresses doivent commencer par https://", "err");
@@ -476,6 +554,10 @@
       }
     }
   });
+  // Glisser-déposer des captures
+  main.addEventListener("dragover", e => { const z = e.target.closest("#drop"); if (!z) return; e.preventDefault(); z.classList.add("over"); });
+  main.addEventListener("dragleave", e => { const z = e.target.closest("#drop"); if (z) z.classList.remove("over"); });
+  main.addEventListener("drop", e => { const z = e.target.closest("#drop"); if (!z) return; e.preventDefault(); z.classList.remove("over"); envoyerPhotos(e.dataTransfer.files); });
   main.addEventListener("submit", e => {
     e.preventDefault();
     const f = e.target, v = lireForm(f);

@@ -7,13 +7,14 @@
      donnees   → tous les onglets publics, réglages des prochaines manches retirés
      inscrire  → formulaire « Rejoindre » (onglet privé _Inscriptions)
    Actions admin (Worker gtqc-admin, derrière Cloudflare Access ; courriel dans _Admins) :
-     etat, manche, resultats, penalites, vods, pilote, engagement, grille,
+     etat, manche, resultats, penalites, vods, photo, photos, pilote, engagement, grille,
      remplacements, inscription
 
    Onglets dont le nom commence par « _ » : jamais publiés.
    Propriétés du script (Paramètres du projet → Propriétés du script) :
      SECRET            code partagé avec les Workers (obligatoire)
      NOTIF_COURRIEL    adresse avertie à chaque inscription (facultatif)
+     DOSSIER_PHOTOS    dossier Drive des captures des manches (créé au premier envoi)
    ========================================================================= */
 
 const SHEET_ID = '1LqsTQ97T14vUCWpr3Bj6HyFB5K2nuciy7moEFfzaQEk';
@@ -43,7 +44,7 @@ function router(e, corps) {
 
     const admin = adminDe(p.courriel);
     if (!admin) return { ok: false, erreur: 'admin' };
-    const actions = { etat, manche, resultats, penalites, vods, pilote, engagement, grille, remplacements, inscription };
+    const actions = { etat, manche, resultats, penalites, vods, photo, photos, pilote, engagement, grille, remplacements, inscription };
     const f = actions[p.action];
     if (!f) return { ok: false, erreur: 'action' };
     if (f === etat) return etat(admin);
@@ -317,6 +318,52 @@ function vods(c) {
   }));
   remplacerLignes('Vods', x => x.course_id === c.course_id, lignes);
   return { ok: true, resume: `${c.course_id} : ${lignes.length} VOD` };
+}
+
+/* ---------- Captures des manches (jeu, diffusion) : fichiers dans Drive, liens dans l'onglet Photos ---------- */
+const MAX_OCTETS_PHOTO = 6 * 1024 * 1024;
+const MIMES_PHOTO = ['image/jpeg', 'image/png', 'image/webp'];
+
+/** Une image (base64, déjà réduite par le navigateur) : enregistrée dans Drive, lisible par lien, puis ajoutée à Photos. */
+function photo(c) {
+  if (!c.course_id || !c.data) return { ok: false, erreur: 'champs' };
+  if (!MIMES_PHOTO.includes(c.mime)) return { ok: false, erreur: 'format' };
+  const octets = Utilities.base64Decode(String(c.data));
+  if (!octets.length || octets.length > MAX_OCTETS_PHOTO) return { ok: false, erreur: 'taille' };
+  const nom = `${c.course_id}-${Date.now()}.${c.mime.split('/')[1].replace('jpeg', 'jpg')}`;
+  const fichier = dossierPhotos().createFile(Utilities.newBlob(octets, c.mime, nom));
+  fichier.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  const deja = lire('Photos').lignes.filter(x => x.course_id === c.course_id).length;
+  const ligne = {
+    photo_id: fichier.getId(), course_id: c.course_id, categorie_id: c.categorie_id || '',
+    url: 'https://lh3.googleusercontent.com/d/' + fichier.getId(), legende: String(c.legende || '').slice(0, 200),
+    ordre: deja + 1, publier: true, ajoute_le: Utilities.formatDate(new Date(), FUSEAU, 'yyyy-MM-dd HH:mm'), source: c.source || 'Jeu',
+  };
+  enregistrerLigne('Photos', () => false, ligne);
+  return { ok: true, photo: ligne, resume: `${c.course_id} : ${nom}` };
+}
+
+/** Légendes, ordre et visibilité des captures d'une manche ; une capture retirée de la liste va à la corbeille de Drive. */
+function photos(c) {
+  if (!c.course_id || !Array.isArray(c.lignes)) return { ok: false, erreur: 'champs' };
+  const avant = lire('Photos').lignes.filter(x => x.course_id === c.course_id);
+  const gardees = c.lignes.map(l => avant.find(x => x.photo_id === l.photo_id) && Object.assign({}, avant.find(x => x.photo_id === l.photo_id), {
+    legende: String(l.legende || '').slice(0, 200), categorie_id: l.categorie_id || '', source: l.source || '', publier: l.publier !== false,
+  })).filter(Boolean).map((l, i) => Object.assign(l, { ordre: i + 1 }));
+  avant.filter(x => !gardees.some(g => g.photo_id === x.photo_id)).forEach(x => {
+    try { DriveApp.getFileById(x.photo_id).setTrashed(true); } catch (err) { console.warn('Fichier introuvable :', x.photo_id); }
+  });
+  remplacerLignes('Photos', x => x.course_id === c.course_id, gardees);
+  return { ok: true, resume: `${c.course_id} : ${gardees.length} captures` };
+}
+
+function dossierPhotos() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('DOSSIER_PHOTOS');
+  if (id) return DriveApp.getFolderById(id);
+  const dossier = DriveApp.createFolder('GTQC — Captures des manches');
+  props.setProperty('DOSSIER_PHOTOS', dossier.getId());
+  return dossier;
 }
 
 /** Crée ou modifie un pilote (pseudo seulement : aucune info personnelle dans cet onglet). */

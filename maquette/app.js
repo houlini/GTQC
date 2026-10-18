@@ -107,6 +107,7 @@
       ["Ravitaillement", m.ravitaillement], ["Temps au stand", m.temps_pit_s ? "≈ " + m.temps_pit_s + " s" : ""]].filter(x => x[1]);
     const cars = D.Voitures.filter(v => v.saison_id === season && v.groupe === m.groupe_voiture).map(v => v.voiture);
     const res = G.results(m.course_id), pen = G.pens(m.course_id), vodList = G.vods(m.course_id);
+    shots = G.photos(m.course_id);
     const cats = D.Manches_Categories.filter(x => x.course_id === m.course_id);
     const ids = [...new Set([...cats.map(x => x.categorie_id || ""), ...res.map(r => r.categorie_id || "")])];
     const cards = ids.map(cat => {
@@ -127,6 +128,7 @@
       ${stats.length ? `<div class="stats">${stats.map(s => `<div><b>${esc(String(s[1]).replace(".", ","))}</b><span>${s[0]}</span></div>`).join("")}</div>` : ""}
       ${kv.length ? `<dl class="kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
       ${m.reglages_caches ? `<p class="secret">Réglages de course dévoilés ${m.reglages_reveles_le ? "le " + esc(G.fmtLong.format(G.asDate(m.reglages_reveles_le))) : "quelques jours avant la manche"}.</p>` : ""}
+      ${shots.length ? `<div class="shots"><h3>Captures <small>${shots.length}</small></h3><div class="shot-grid">${shots.map((p, i) => `<button type="button" class="shot" data-shot="${i}" aria-label="Agrandir la capture ${i + 1}${p.legende ? " : " + esc(p.legende) : ""}"><img src="${esc(G.photoSrc(p, 480))}" alt="" loading="lazy"></button>`).join("")}</div></div>` : ""}
       ${vodList.length ? `<div class="vods"><h3>Revoir la course</h3>${vodList.map(v => `<a class="vod ${v.plateforme.toLowerCase()}" href="${esc(v.url)}" target="_blank" rel="noopener"><span>${esc(v.plateforme)}</span>${esc(v.titre || (v.categorie_id ? "Division " + v.categorie_id.slice(1) : "Rediffusion"))}</a>`).join("")}</div>` : ""}
       ${cars.length ? `<p class="muted">Voitures permises : ${cars.map(esc).join(", ")}</p>` : ""}
       ${m.note_publique ? `<p class="muted">${esc(m.note_publique)}</p>` : ""}
@@ -134,6 +136,28 @@
     $("drawer").hidden = false;
     document.querySelector(".drawer-close").focus();
   }
+  // ---------- Captures en grand (visionneuse)
+  let shots = [], shotAt = 0;
+  const viewer = document.createElement("dialog");
+  viewer.className = "viewer";
+  viewer.innerHTML = `<button type="button" class="v-close" aria-label="Fermer">×</button><button type="button" class="v-nav prev" aria-label="Capture précédente">‹</button>
+    <figure><img alt=""><figcaption></figcaption></figure><button type="button" class="v-nav next" aria-label="Capture suivante">›</button>`;
+  document.body.append(viewer);
+  const showShot = i => {
+    shotAt = (i + shots.length) % shots.length;
+    const p = shots[shotAt];
+    viewer.querySelector("img").src = G.photoSrc(p, 1920);
+    viewer.querySelector("figcaption").textContent = [p.legende, `${shotAt + 1} / ${shots.length}`].filter(Boolean).join(" · ");
+    viewer.querySelectorAll(".v-nav").forEach(b => { b.hidden = shots.length < 2; });
+  };
+  viewer.addEventListener("click", e => {
+    if (e.target.closest(".prev")) showShot(shotAt - 1);
+    else if (e.target.closest(".next")) showShot(shotAt + 1);
+    else if (e.target.closest(".v-close") || e.target === viewer) viewer.close();
+  });
+  viewer.addEventListener("keydown", e => { if (e.key === "ArrowLeft") showShot(shotAt - 1); if (e.key === "ArrowRight") showShot(shotAt + 1); });
+  $("drawerBody").addEventListener("click", e => { const b = e.target.closest("[data-shot]"); if (!b) return; showShot(+b.dataset.shot); viewer.showModal(); });
+
   function closeDrawer() { $("drawer").hidden = true; const b = $("openDrawer"); b && b.focus(); }
   $("drawer").addEventListener("click", e => { if (e.target.closest("[data-close]")) closeDrawer(); });
 

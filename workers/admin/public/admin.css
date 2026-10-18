@@ -71,3 +71,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .adm-actions select, .adm-actions input:not([type]), .adm-actions input[type="search"] { min-width: 0; width: 100%; }
 }
 .adm-table select[data-promo] { min-width: 150px; }
+.drop { display: grid !important; place-items: center; gap: 4px; padding: 26px; border: 2px dashed var(--line); border-radius: 14px; cursor: pointer; text-align: center; color: var(--muted); }
+.drop b { color: var(--ink); font-size: 17px; }
+.drop:hover, .drop.over { border-color: var(--accent); background: rgba(230,255,0,.05); }
+.ph-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.ph { margin: 0; display: grid; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--navy); align-content: start; }
+.ph img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; background: #000; }
+.ph .adm-actions select { min-width: 0; width: auto; }
+.lien.on { color: var(--ink); text-decoration: underline; }

@@ -53,7 +53,10 @@ Site en **français seulement**, à l'adresse GitHub Pages gratuite. Liens : Fac
 - **Admin** : Worker `workers/admin` (`admin.<domaine>`), derrière **Cloudflare Access** (code par courriel). Seuls les
   courriels de `_Admins` peuvent écrire. Il gère les manches, les résultats (collés ou en fichier, points calculés avec
   le barème), les pénalités, la grille des lobbys aux 2 manches, les réserves et absences, les pilotes (Twitch compris),
-  les VOD et les inscriptions.
+  les VOD, les captures des manches et les inscriptions.
+- **Captures des manches** (jeu ou diffusion) : envoyées depuis l'admin (réduites à 1920 px), rangées dans le dossier
+  Drive « GTQC — Captures des manches » (lisible par lien) et listées dans l'onglet `Photos`. Le site les montre dans la
+  fiche de la manche, avec une visionneuse.
 - **Site** : statique (GitHub Pages). `maquette/chargeur.js` lit l'API, ou `data.js` (export de secours) tant que
   l'API n'est pas en ligne.
 - **Classements calculés par le site** à partir de `Resultats` + `Penalites`, pour éviter les erreurs de formules à la main.

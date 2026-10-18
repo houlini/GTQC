@@ -41,7 +41,8 @@ prochaines manches de `data.js` (même règle que l'API).
    `apps-script/gtqc.gs` et `appsscript.json` (ou remplis `SCRIPT_ID` dans `apps-script/deployer.ps1` et lance-le).
    Exécute `creerSecret` une fois, puis *Déployer → Nouveau déploiement → Application web* (exécuter en tant que
    moi, accès : tout le monde). Copie l'adresse `/exec` et la propriété `SECRET`.
-   Facultatif : propriété `NOTIF_COURRIEL` = adresse avertie à chaque inscription.
+   Facultatif : propriété `NOTIF_COURRIEL` = adresse avertie à chaque inscription. Le script demande l'accès au Sheet
+   et à Drive (dossier « GTQC — Captures des manches », créé au premier envoi de capture).
 2. **Twitch** : dev.twitch.tv → Console → Applications (l'appli de LNHQ peut servir) : Client ID et secret.
 3. **Worker API** (`workers/api`) : remplis `ORIGINES` et la route `api.DOMAINE` dans `wrangler.toml`, puis :
    `npx wrangler secret put SCRIPT_URL`, `SCRIPT_SECRET`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, et `npx wrangler deploy`.
