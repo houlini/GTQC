@@ -88,6 +88,8 @@ for ws in wb.worksheets:
     data[ws.title] = out
 
 masquer_reglages(data)
+# Captures cachées ou de vérification (écran des résultats avec les identifiants PSN) : jamais publiées
+data["Photos"] = [p for p in data.get("Photos", []) if p.get("url") and str(p.get("publier", "")).upper() == "TRUE" and p.get("source") != "Résultats"]
 dest.parent.mkdir(exist_ok=True)
 dest.write_text("window.GTQC = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
 print({k: len(v) for k, v in data.items()})

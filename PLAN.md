@@ -198,6 +198,8 @@ import seulement ; les relancer ne met pas le Google Sheet à jour.
 - Lecture des captures de résultats GT7 : faite (admin → Résultats → « Lire une capture du jeu », Gemini gratuit comme
   LNHQ, clé `GEMINI_KEY`). Les identifiants PSN lus sont associés aux pilotes dans l'onglet privé `_PSN`, appris au fil
   des saisies. À tester sur de vraies captures une fois l'admin en ligne ; ensuite, saisir les anciennes manches.
+  La dernière capture lue est gardée pour la vérification (une par manche et lobby, elle remplace la précédente).
+  Elle reste privée dans Drive, sans lien public, parce qu'elle montre les PSN, et n'est jamais dans les données publiques.
 - Les courses de la ligue sont diffusées sur une autre chaîne : `Config.twitch_url` n'est plus affiché sur le site.
 - Réglé (S1) : le tableau « ENTRER POINTS ICI » contient les points marqués par les remplaçants. Ces points comptent
   pour l'équipe, mais pas pour le pilote remplacé. Les points par pilote du classement officiel sont donc les bons

@@ -44,10 +44,11 @@ function router(e, corps) {
 
     const admin = adminDe(p.courriel);
     if (!admin) return { ok: false, erreur: 'admin' };
-    const actions = { etat, manche, resultats, penalites, vods, photo, photos, psn, pilote, engagement, grille, remplacements, inscription };
+    const actions = { etat, manche, resultats, penalites, vods, photo, photos, capture, psn, pilote, engagement, grille, remplacements, inscription };
     const f = actions[p.action];
     if (!f) return { ok: false, erreur: 'action' };
     if (f === etat) return etat(admin);
+    if (f === capture) return capture(corps);
     return avecVerrou(() => {
       const r = f(corps, admin);
       journal(admin.courriel, p.action, r.resume || '');
@@ -168,6 +169,8 @@ function donneesPubliques() {
     d[nom] = lire(nom).lignes;
   });
   masquerReglages(d);
+  // Captures cachées ou de vérification (identifiants PSN) : jamais dans les données publiques
+  d.Photos = (d.Photos || []).filter(p => p.url && vrai(p.publier) && p.source !== 'Résultats');
   ecrireCache(cache, d);
   return d;
 }
@@ -331,13 +334,26 @@ function photo(c) {
   const octets = Utilities.base64Decode(String(c.data));
   if (!octets.length || octets.length > MAX_OCTETS_PHOTO) return { ok: false, erreur: 'taille' };
   const nom = `${c.course_id}-${Date.now()}.${c.mime.split('/')[1].replace('jpeg', 'jpg')}`;
+  // Capture de vérification des résultats (source « Résultats ») : seul le dernier envoi est gardé par manche et
+  // lobby. c.lot regroupe les pages d'un même envoi ; les captures d'un envoi précédent vont à la corbeille.
+  const verif = c.source === 'Résultats';
+  if (verif) {
+    const anciennes = lire('Photos').lignes.filter(x => x.course_id === c.course_id && (x.categorie_id || '') === (c.categorie_id || '')
+      && x.source === 'Résultats' && String(x.lot || '') !== String(c.lot || ''));
+    anciennes.forEach(x => { try { DriveApp.getFileById(x.photo_id).setTrashed(true); } catch (err) { console.warn('Fichier introuvable :', x.photo_id); } });
+    if (anciennes.length) remplacerLignes('Photos', x => anciennes.some(a => a.photo_id === x.photo_id), []);
+  }
   const fichier = dossierPhotos().createFile(Utilities.newBlob(octets, c.mime, nom));
-  fichier.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  // L'écran des résultats montre les identifiants PSN : la capture de vérification reste privée (pas de lien public),
+  // l'admin la lit avec l'action « capture ».
+  if (!verif) fichier.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   const deja = lire('Photos').lignes.filter(x => x.course_id === c.course_id).length;
   const ligne = {
     photo_id: fichier.getId(), course_id: c.course_id, categorie_id: c.categorie_id || '',
-    url: 'https://lh3.googleusercontent.com/d/' + fichier.getId(), legende: String(c.legende || '').slice(0, 200),
-    ordre: deja + 1, publier: true, ajoute_le: Utilities.formatDate(new Date(), FUSEAU, 'yyyy-MM-dd HH:mm'), source: c.source || 'Jeu',
+    url: verif ? '' : 'https://lh3.googleusercontent.com/d/' + fichier.getId(), legende: String(c.legende || '').slice(0, 200),
+    // Les captures de vérification ne sont pas montrées sur le site
+    ordre: deja + 1, publier: !verif, ajoute_le: Utilities.formatDate(new Date(), FUSEAU, 'yyyy-MM-dd HH:mm'), source: c.source || 'Jeu',
+    lot: verif ? String(c.lot || '') : '',
   };
   enregistrerLigne('Photos', () => false, ligne);
   return { ok: true, photo: ligne, resume: `${c.course_id} : ${nom}` };
@@ -346,15 +362,24 @@ function photo(c) {
 /** Légendes, ordre et visibilité des captures d'une manche ; une capture retirée de la liste va à la corbeille de Drive. */
 function photos(c) {
   if (!c.course_id || !Array.isArray(c.lignes)) return { ok: false, erreur: 'champs' };
-  const avant = lire('Photos').lignes.filter(x => x.course_id === c.course_id);
+  // Les captures de vérification des résultats ne sont pas gérées ici (onglet Résultats de l'admin)
+  const avant = lire('Photos').lignes.filter(x => x.course_id === c.course_id && x.source !== 'Résultats');
   const gardees = c.lignes.map(l => avant.find(x => x.photo_id === l.photo_id) && Object.assign({}, avant.find(x => x.photo_id === l.photo_id), {
     legende: String(l.legende || '').slice(0, 200), categorie_id: l.categorie_id || '', source: l.source || '', publier: l.publier !== false,
   })).filter(Boolean).map((l, i) => Object.assign(l, { ordre: i + 1 }));
   avant.filter(x => !gardees.some(g => g.photo_id === x.photo_id)).forEach(x => {
     try { DriveApp.getFileById(x.photo_id).setTrashed(true); } catch (err) { console.warn('Fichier introuvable :', x.photo_id); }
   });
-  remplacerLignes('Photos', x => x.course_id === c.course_id, gardees);
+  remplacerLignes('Photos', x => x.course_id === c.course_id && x.source !== 'Résultats', gardees);
   return { ok: true, resume: `${c.course_id} : ${gardees.length} captures` };
+}
+
+/** Capture de vérification (privée) d'une manche : renvoyée à l'admin en base64. */
+function capture(c) {
+  const p = lire('Photos').lignes.find(x => x.photo_id === c.photo_id && x.source === 'Résultats');
+  if (!p) return { ok: false, erreur: 'introuvable' };
+  const blob = DriveApp.getFileById(p.photo_id).getBlob();
+  return { ok: true, mime: blob.getContentType(), data: Utilities.base64Encode(blob.getBytes()) };
 }
 
 /** Identifiants PSN lus sur les captures de résultats → pilote (onglet privé _PSN, jamais publié). */

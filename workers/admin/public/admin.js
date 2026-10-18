@@ -172,6 +172,7 @@
           <div class="adm-actions"><button type="button" class="btn ghost" id="ajLigne">+ Pilote</button><button type="button" class="btn ghost" id="ajLobby">Ajouter tout le lobby</button></div>
           <label class="check"><input type="checkbox" id="terminer" ${m.statut === "Terminée" ? "checked" : ""}> Marquer la manche comme terminée</label>
           <div class="adm-actions"><button type="button" class="btn" id="saveRes">Enregistrer les résultats</button><span class="muted">Points calculés avec le barème du lobby${bonus ? ` (+${bonus} meilleur tour)` : ""}.</span></div>
+          ${blocVerif(m.course_id, ui.lobby)}
         </div>
       </div>
       <div class="adm-card"><h2>Pénalités de la manche</h2>
@@ -212,11 +213,12 @@
     const liste = [...fichiers].filter(f => /^image\/(jpeg|png|webp)$/.test(f.type));
     if (!liste.length) return toast("Choisis des captures JPEG, PNG ou WebP.", "err");
     if (demo) return toast("Mode démo : la lecture des captures se fait par le serveur (clé Gemini), disponible une fois l'admin en ligne.", "warn");
-    const etat = $("luEtat"), lues = [];
+    const etat = $("luEtat"), lues = [], images = [];
     for (const [i, f] of liste.entries()) {
       etat.textContent = `Lecture ${i + 1} / ${liste.length} : ${f.name}…`;
       try {
         const img = await reduire(f);
+        images.push(img);
         const rep = await fetch("/api/resultats/lire", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: img.data, mime: img.mime }) });
         const r = await rep.json();
         if (!r.ok) throw new Error({ lecture_indisponible: "clé Gemini absente du Worker", quota: "quota Gemini atteint, réessaie dans une minute" }[r.erreur] || r.erreur);
@@ -225,7 +227,44 @@
       } catch (err) { toast(`${f.name} : ${err.message}`, "err"); }
     }
     etat.textContent = "";
-    if (lues.length) appliquerLecture(lues);
+    // Gardées pour la vérification : envoyées avec les résultats, elles remplacent la capture précédente
+    if (lues.length) { ui.capturesLues = { cle: ui.res + ui.lobby, images }; appliquerLecture(lues); }
+  }
+  /** Envoie les captures lues (source « Résultats », privées) une fois les résultats enregistrés. */
+  async function garderCaptures(cid, cat) {
+    const c = ui.capturesLues;
+    if (!c || c.cle !== cid + cat) return;
+    const lot = String(Date.now());
+    for (const img of c.images) {
+      try {
+        const rep = await fetch("/api/photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ course_id: cid, categorie_id: cat, source: "Résultats", lot, data: img.data, mime: img.mime }) });
+        const r = await rep.json();
+        if (!r.ok) throw new Error(r.erreur || "erreur");
+      } catch (err) { toast("Capture de vérification non gardée : " + err.message, "err"); return; }
+    }
+    ui.capturesLues = null;
+  }
+  async function voirCapture(id, bouton) {
+    bouton.disabled = true; bouton.textContent = "Chargement…";
+    try {
+      const rep = await fetch("/api/capture", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ photo_id: id }) });
+      const r = await rep.json();
+      if (!r.ok) throw new Error(r.erreur || "erreur");
+      const img = document.createElement("img");
+      img.className = "verif-img"; img.alt = "Capture de vérification"; img.src = `data:${r.mime};base64,${r.data}`;
+      bouton.replaceWith(img);
+    } catch (err) { bouton.disabled = false; bouton.textContent = "Réessayer"; toast("Capture illisible : " + err.message, "err"); }
+  }
+  /** Bloc « capture de vérification » sous le tableau des résultats. */
+  function blocVerif(cid, cat) {
+    const enAttente = ui.capturesLues && ui.capturesLues.cle === cid + cat ? ui.capturesLues.images : [];
+    const gardees = D.Photos.filter(p => p.course_id === cid && (p.categorie_id || "") === cat && p.source === "Résultats");
+    if (!enAttente.length && !gardees.length) return "";
+    return `<div class="verif"><h3>Capture de vérification</h3>
+      ${enAttente.length ? `<div class="verif-grid">${enAttente.map(i => `<img class="verif-img" src="${i.apercu}" alt="Capture lue">`).join("")}</div>
+        <p class="muted">Sera gardée à l'enregistrement et remplacera la précédente${gardees.length ? ` (du ${esc(gardees[0].ajoute_le)})` : ""}. Privée : jamais affichée sur le site.</p>`
+      : `<p class="muted">Dernière capture, gardée le ${esc(gardees[0].ajoute_le)} (privée).</p>
+        <div class="verif-grid">${gardees.map((p, i) => `<button type="button" class="btn ghost" data-verif="${esc(p.photo_id)}">Voir${gardees.length > 1 ? " la page " + (i + 1) : " la capture"}</button>`).join("")}</div>`}</div>`;
   }
   function lireClassement(texte) {
     const inconnus = [], lignes = [];
@@ -372,8 +411,9 @@
     const m = D.Manches.find(x => x.course_id === ui.ph) || ms.filter(x => x.statut === "Terminée" || resultatsDe(x.course_id).length).pop() || ms[0];
     if (!m) return "<p>Aucune manche.</p>";
     ui.ph = m.course_id;
-    if (!ui.phB || ui.phB.cle !== m.course_id) ui.phB = { cle: m.course_id, lignes: D.Photos.filter(p => p.course_id === m.course_id).sort((a, b) => a.ordre - b.ordre).map(p => ({ ...p })) };
-    const compte = ms.map(x => [x, D.Photos.filter(p => p.course_id === x.course_id).length]);
+    // Les captures de vérification des résultats (privées) sont dans l'onglet Résultats, pas ici
+    if (!ui.phB || ui.phB.cle !== m.course_id) ui.phB = { cle: m.course_id, lignes: D.Photos.filter(p => p.course_id === m.course_id && p.source !== "Résultats").sort((a, b) => a.ordre - b.ordre).map(p => ({ ...p })) };
+    const compte = ms.map(x => [x, D.Photos.filter(p => p.course_id === x.course_id && p.source !== "Résultats").length]);
     return `<div class="adm-head"><h1>Captures <small>${esc(saison)}</small></h1><div class="adm-actions">${choixSaison()}<select id="phManche">${optManches(m.course_id)}</select></div></div>
       <p class="muted">Captures du jeu (photo mode, podium, écran des résultats) ou de la diffusion. Elles s'affichent dans la fiche de la manche sur le site. Les images sont réduites à 1920 px avant l'envoi et rangées dans le dossier Drive « GTQC — Captures des manches ».</p>
       <p class="muted">${compte.map(([x, n]) => `<button type="button" class="lien${x.course_id === m.course_id ? " on" : ""}" data-phm="${esc(x.course_id)}">M${x.manche} (${n})</button>`).join(" ")}</p>
@@ -542,8 +582,12 @@
       // Noms lus sur la capture et associés à la main : retenus dans _PSN pour les prochaines lectures
       const nouveaux = L.filter(l => l.lu && l.pilote_id && norm(l.lu) !== norm(pseudo(l.pilote_id)) && !D._PSN.some(x => norm(x.psn) === norm(l.lu)));
       if (nouveaux.length) await envoyer("psn", { lignes: nouveaux.map(l => ({ psn: l.lu, pilote_id: l.pilote_id })) }, `${nouveaux.length} PSN retenu(s)`);
-      return envoyer("resultats", { course_id: ui.res, categorie_id: ui.lobby, terminer: $("terminer").checked, lignes: L.map((l, i) => ({ pilote_id: l.pilote_id, statut: l.statut, meilleur_tour: l.meilleur_tour, note: l.note, position: i + 1 })) }, `Résultats ${ui.res} ${ui.lobby}`);
+      const cid = ui.res, cat = ui.lobby;
+      const r = await envoyer("resultats", { course_id: cid, categorie_id: cat, terminer: $("terminer").checked, lignes: L.map((l, i) => ({ pilote_id: l.pilote_id, statut: l.statut, meilleur_tour: l.meilleur_tour, note: l.note, position: i + 1 })) }, `Résultats ${cid} ${cat}`);
+      if (r.ok && !r.demo && ui.capturesLues) { await garderCaptures(cid, cat); await charger(); render(); }
+      return;
     }
+    if (d.verif) return voirCapture(d.verif, t);
     if (t.id === "ajPen") { ui.pens.lignes.push({ pilote_id: "", type: "Points", points: 1, motif: "", publier: true }); return render(); }
     if (d.pdel) { ui.pens.lignes.splice(+d.pdel, 1); return render(); }
     if (t.id === "savePen") return envoyer("penalites", { course_id: ui.res, lignes: ui.pens.lignes.map(p => ({ ...p, publier: !no(p.publier) })) }, `Pénalités ${ui.res}`);

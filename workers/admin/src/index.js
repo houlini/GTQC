@@ -10,6 +10,7 @@ const ACTIONS = {
   'POST /api/vods': 'vods',
   'POST /api/photo': 'photo',
   'POST /api/photos': 'photos',
+  'POST /api/capture': 'capture',
   'POST /api/psn': 'psn',
   'POST /api/pilote': 'pilote',
   'POST /api/engagement': 'engagement',

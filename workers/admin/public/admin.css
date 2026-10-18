@@ -81,3 +81,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .lien.on { color: var(--ink); text-decoration: underline; }
 .adm-table tr.manque td { background: rgba(255,209,102,.08); }
 .lu { display: block; color: var(--warn); font-size: 12px; margin-top: 2px; }
+.verif { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.verif h3 { margin: 0; }
+.verif-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.verif-img { max-width: 100%; width: 320px; border-radius: 8px; border: 1px solid var(--line); }
