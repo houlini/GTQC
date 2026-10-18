@@ -184,8 +184,10 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
 .drawer-close { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 16px); right: calc(var(--gutter-r) + 8px); width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255,255,255,.1); font-size: 24px; cursor: pointer; }
 .dr-head { display: grid; gap: 8px; padding-right: 48px; }
 .dr-head h2 { font-size: 40px; }
-.dr-trace { background: var(--navy); border-radius: 12px; padding: 20px; display: grid; place-items: center; }
+.dr-trace { display: grid; place-items: center; padding-block: 12px 20px; border-bottom: 1px solid var(--line); }
 .dr-trace img { max-height: 220px; width: auto; }
+.dr-head + .dr-trace { margin-top: 4px; }
+.stats { padding-bottom: 6px; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .stats b { display: block; font-size: 30px; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
 .stats span, .kv dt { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
