@@ -45,12 +45,17 @@ Domaine : **gtqc.net** (zone Cloudflare). À faire une fois :
    et à Drive (dossier « GTQC — Captures des manches », créé au premier envoi de capture).
 2. **Twitch** : dev.twitch.tv → Console → Applications (l'appli de LNHQ peut servir) : Client ID et secret.
 3. **Worker API** (`workers/api`) : (route `api.gtqc.net` déjà dans `wrangler.toml`) :
-   `npx wrangler secret put SCRIPT_URL`, `SCRIPT_SECRET`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, et `npx wrangler deploy`.
+   `npx wrangler secret put SCRIPT_URL --name gtqc-api` (idem `SCRIPT_SECRET`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`),
+   puis `npx wrangler deploy -c workers/api/wrangler.toml`.
 4. **Cloudflare Access** : Zero Trust → Access → Applications → *Self-hosted* sur `admin.gtqc.net`, politique
    « courriels » avec les admins. Copie le domaine d'équipe et l'AUD dans `workers/admin/wrangler.toml`.
-5. **Worker admin** (`workers/admin`) : `npx wrangler secret put SCRIPT_URL` et `SCRIPT_SECRET`, puis `npx wrangler deploy`.
-   Pour lire les captures de résultats GT7 : `npx wrangler secret put GEMINI_KEY` (clé gratuite sur aistudio.google.com).
+5. **Worker admin** (`workers/admin`) : `npx wrangler secret put SCRIPT_URL --name gtqc-admin` (idem `SCRIPT_SECRET`),
+   puis `npx wrangler deploy -c workers/admin/wrangler.toml`. Captures de résultats GT7 :
+   `npx wrangler secret put GEMINI_KEY --name gtqc-admin` (clé gratuite sur aistudio.google.com).
 6. **Site** : Worker « gtqc » relié au dépôt GitHub (Workers Builds) : chaque Push le redéploie avec `wrangler.jsonc`.
    `site/worker.js` sert `maquette/` à la racine (gtqc.net/pilotes.html) et `assets/`, rien d'autre du dépôt.
    L'API `https://api.gtqc.net` est déjà dans `maquette/chargeur.js` et `Config.api_url` ; tant qu'elle
    ne répond pas, le site lit `data.js`. Les admins sont listés dans l'onglet `_Admins` (colonne `actif`).
+
+**Attention Wrangler** : le `wrangler.jsonc` à la racine (site) est trouvé même depuis `workers/api` ou `workers/admin`.
+Toujours préciser `-c workers/…/wrangler.toml` (déploiement) ou `--name gtqc-api` / `--name gtqc-admin` (secrets).

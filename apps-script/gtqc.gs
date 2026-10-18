@@ -25,7 +25,7 @@ const REGLAGES = ['heure_du_jour', 'vitesse_temps', 'conditions', 'arret_pit_min
   'carburant_initial_l', 'ravitaillement', 'temps_pit_s'];
 const CHAMPS_PILOTE = ['pseudo', 'numero', 'region', 'controle', 'driver_rating', 'equipe_id', 'avatar', 'bio', 'actif', 'twitch'];
 const STATUTS_INSCRIPTION = ['Nouvelle', 'Contactée', 'Acceptée', 'Réserve', 'Refusée', 'Archivée'];
-const CLE_CACHE = 'donnees-v1';
+const CLE_CACHE = 'donnees-v2';
 
 function doGet(e) { return repondre(router(e, {})); }
 function doPost(e) {
@@ -76,10 +76,13 @@ function avecVerrou(f) {
 let classeurMemo = null;
 const classeur = () => classeurMemo || (classeurMemo = SpreadsheetApp.openById(SHEET_ID));
 
+// Fuseau du classeur (pas celui de Montréal) : sinon une heure « 18:45 » ressort « 21:45 »
+let fuseauClasseur = null;
 function valeur(v) {
   if (v instanceof Date) {
+    const tz = fuseauClasseur || (fuseauClasseur = classeur().getSpreadsheetTimeZone());
     // Les heures seules arrivent comme des dates en 1899
-    return v.getFullYear() < 1901 ? Utilities.formatDate(v, FUSEAU, 'HH:mm') : Utilities.formatDate(v, FUSEAU, 'yyyy-MM-dd');
+    return v.getFullYear() < 1901 ? Utilities.formatDate(v, tz, 'HH:mm') : Utilities.formatDate(v, tz, 'yyyy-MM-dd');
   }
   return v;
 }
@@ -96,6 +99,43 @@ function lire(nom) {
     if (Object.keys(o).length) { Object.defineProperty(o, '_ligne', { value: i + 1, enumerable: false }); lignes.push(o); }
   }
   return { feuille: f, entetes, lignes };
+}
+
+/** Lit plusieurs onglets en une seule fois (service avancé Sheets : 2 requêtes au lieu d'une par onglet).
+    Valeurs brutes + valeurs affichées : une cellule affichée comme date (8/16/2026) ou heure (18:00) et dont la valeur
+    brute est un nombre devient « yyyy-MM-dd » ou « HH:mm », comme dans lire(). Renvoie { onglet: [lignes] }. */
+function lireTout(noms) {
+  if (!noms.length) return {};
+  const plages = noms.map(n => `'${n.replace(/'/g, "''")}'`);
+  const brut = Sheets.Spreadsheets.Values.batchGet(SHEET_ID, { ranges: plages, valueRenderOption: 'UNFORMATTED_VALUE', dateTimeRenderOption: 'SERIAL_NUMBER' }).valueRanges;
+  const affiche = Sheets.Spreadsheets.Values.batchGet(SHEET_ID, { ranges: plages, valueRenderOption: 'FORMATTED_VALUE' }).valueRanges;
+  const deSerie = (n, vu) => {
+    const ms = Math.round((n - 25569) * 864e5);   // 25569 = jours entre 1899-12-30 et 1970-01-01
+    if (/^\d{1,2}:\d{2}(:\d{2})?(\s?[AP]M)?$/i.test(vu) && n < 1) {
+      const min = Math.round(n * 1440);
+      return String(Math.floor(min / 60) % 24).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0');
+    }
+    return Utilities.formatDate(new Date(ms), 'UTC', 'yyyy-MM-dd');
+  };
+  const sortie = {};
+  noms.forEach((nom, k) => {
+    const vals = brut[k].values || [], vus = affiche[k].values || [];
+    const entetes = (vals[0] || []).map(h => String(h).trim());
+    const lignes = [];
+    for (let i = 1; i < vals.length; i++) {
+      const o = {};
+      entetes.forEach((h, j) => {
+        let v = vals[i][j];
+        if (!h || v === '' || v === null || v === undefined) return;
+        const vu = String((vus[i] || [])[j] || '');
+        if (typeof v === 'number' && /^(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2}|\d{1,2}:\d{2})/.test(vu)) v = deSerie(v, vu);
+        o[h] = v;
+      });
+      if (Object.keys(o).length) lignes.push(o);
+    }
+    sortie[nom] = lignes;
+  });
+  return sortie;
 }
 
 // Texte qui ressemble à une date, une heure ou une formule : apostrophe, pour que le Sheet le garde tel quel
@@ -163,12 +203,7 @@ function donneesPubliques() {
   const cache = CacheService.getScriptCache();
   const enCache = lireCache(cache);
   if (enCache) return enCache;
-  const d = {};
-  classeur().getSheets().forEach(f => {
-    const nom = f.getName();
-    if (nom.startsWith('_') || ONGLETS_INTERNES.includes(nom)) return;
-    d[nom] = lire(nom).lignes;
-  });
+  const d = lireTout(classeur().getSheets().map(f => f.getName()).filter(nom => !nom.startsWith('_') && !ONGLETS_INTERNES.includes(nom)));
   masquerReglages(d);
   // Captures cachées ou de vérification (identifiants PSN) : jamais dans les données publiques
   d.Photos = (d.Photos || []).filter(p => p.url && vrai(p.publier) && p.source !== 'Résultats');
@@ -250,13 +285,8 @@ function inscrire(c) {
 
 /* ---------- Admin ---------- */
 function etat(admin) {
-  const d = {};
-  classeur().getSheets().forEach(f => {
-    const nom = f.getName();
-    if (nom === '_Journal' || ONGLETS_INTERNES.includes(nom)) return;
-    d[nom] = lire(nom).lignes;
-  });
-  d._Journal = lire('_Journal').lignes.slice(-50).reverse();
+  const d = lireTout(classeur().getSheets().map(f => f.getName()).filter(nom => !ONGLETS_INTERNES.includes(nom)));
+  d._Journal = (d._Journal || []).slice(-50).reverse();
   return { ok: true, moi: admin, donnees: d };
 }
 

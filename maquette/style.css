@@ -643,3 +643,10 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
   .ev-plate .ev-trace { max-height: 100px; }
 }
 .ev-card-top .ev-cover { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: center 30%; filter: none; }
+
+/* Chargement : la page reste invisible le temps de recevoir les données (≈ 0,1 s), puis apparaît en fondu
+   (chargeur.js ajoute body.pret). Sans cette classe après 4 s (script bloqué), elle s'affiche quand même. */
+body > *:not(script) { transition: opacity .25s ease-out; }
+body:not(.pret) > *:not(script) { opacity: 0; animation: gtqc-secours 0s 4s forwards; }
+@keyframes gtqc-secours { to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { body > *:not(script) { transition: none; } }

@@ -29,5 +29,7 @@
   depuisApi()
     .catch(err => { if (API) console.warn("API GTQC indisponible, données du dépôt :", err.message); return charger("data.js"); })
     .then(() => scripts.reduce((p, src) => p.then(() => charger(src)), Promise.resolve()))
-    .catch(err => console.error("Chargement de la page :", err));
+    .catch(err => console.error("Chargement de la page :", err))
+    // La page apparaît d'un coup (fondu) une fois remplie, même en cas d'erreur
+    .finally(() => document.body.classList.add("pret"));
 })();

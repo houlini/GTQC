@@ -31,20 +31,36 @@ export default {
     finale.headers.set('Cache-Control', 'no-store');
     return finale;
   },
+
+  // Toutes les 5 minutes (wrangler.toml → crons) : copie des données préparée d'avance.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(enCache(ctx, 'donnees', 0, () => donnees(env)));
+  },
 };
 
-/* ---------- Cache partagé ----------
-   L'âge est vérifié ici (en-tête X-Genere) : les réglages de cache de la zone peuvent allonger la durée annoncée. */
+/* ---------- Cache partagé (servi tout de suite, rafraîchi en arrière-plan) ----------
+   La copie est gardée 1 jour ; après « duree » secondes (âge lu dans X-Genere), elle est encore servie
+   immédiatement et une nouvelle est préparée en arrière-plan. Le visiteur n'attend jamais le script,
+   sauf la toute première fois. Si le script échoue, l'ancienne copie reste en place. */
+const GARDE = 86400;
 async function enCache(ctx, nom, duree, construire) {
   const cache = caches.default;
   const cle = new Request('https://cache.gtqc/' + nom);
-  let rep = await cache.match(cle);
-  if (rep && !(Date.now() - Number(rep.headers.get('X-Genere') || 0) < duree * 1000)) rep = null;
-  if (!rep) {
-    rep = await construire();
-    if (rep.ok) ctx.waitUntil(cache.put(cle, rep.clone()));
+  const rafraichir = async () => {
+    const rep = await construire();
+    if (rep.ok) {
+      const copie = new Response(rep.clone().body, rep);
+      copie.headers.set('Cache-Control', 'public, max-age=' + GARDE);
+      await cache.put(cle, copie);
+    }
+    return rep;
+  };
+  const rep = await cache.match(cle);
+  if (rep) {
+    if (!(Date.now() - Number(rep.headers.get('X-Genere') || 0) < duree * 1000)) ctx.waitUntil(rafraichir().catch(err => console.error('Rafraîchissement', nom, err.message)));
+    return rep;
   }
-  return rep;
+  return rafraichir();
 }
 
 async function donnees(env) {
