@@ -192,6 +192,9 @@
     if (!n) return "";
     const lien = D._PSN.find(x => norm(x.psn) === n);
     if (lien) return lien.pilote_id;
+    // PSN de la fiche (Pilotes.psn, plusieurs séparés par « / »)
+    const parPsn = D.Pilotes.find(x => String(x.psn || "").split(/[\/,;]/).some(v => norm(v) === n));
+    if (parPsn) return parPsn.pilote_id;
     const p = D.Pilotes.find(x => norm(x.pseudo) === n || norm(x.pilote_id) === n)
       || D.Pilotes.find(x => n.length > 3 && norm(x.pseudo).length > 3 && (norm(x.pseudo).includes(n) || n.includes(norm(x.pseudo))));
     return p ? p.pilote_id : "";
@@ -370,19 +373,19 @@
   /* ---------- Pilotes ---------- */
   function vuePilotes() {
     const q = norm(ui.q || "");
-    const ps = pilotes().filter(p => !q || norm(p.pseudo).includes(q) || norm(p.twitch).includes(q));
+    const ps = pilotes().filter(p => !q || norm(p.pseudo).includes(q) || norm(p.twitch).includes(q) || norm(p.psn).includes(q));
     const p = ui.pilote === "nouveau" ? {} : D.Pilotes.find(x => x.pilote_id === ui.pilote);
     return `<div class="adm-head"><h1>Pilotes <small>${D.Pilotes.length}</small></h1><div class="adm-actions"><input type="search" id="q" placeholder="Rechercher" value="${esc(ui.q || "")}"><button type="button" class="btn" data-pnew>+ Nouveau pilote</button></div></div>
-      <p class="muted">Pseudos seulement : aucun nom réel, courriel ou PSN dans cet onglet (il est publié). La chaîne Twitch fait apparaître le pilote sur GTQC TV.</p>
+      <p class="muted">Cet onglet est publié : pseudo et PSN seulement, aucun nom réel ni courriel. Le PSN aide à reconnaître les captures de résultats ; la chaîne Twitch fait apparaître le pilote sur GTQC TV.</p>
       ${ui.pilote ? `<form class="adm-card" id="fPilote"><h2>${p.pilote_id ? "Modifier " + esc(p.pseudo) : "Nouveau pilote"}</h2><input type="hidden" name="pilote_id" value="${esc(p.pilote_id || "")}">
         <div class="adm-grid">${champ("pseudo", "Pseudo (Discord)", p.pseudo, "text", "required")}${champ("numero", "Numéro", p.numero, "number")}${champ("region", "Région", p.region)}
           <label>Contrôle<select name="controle">${options([["Volant", "Volant"], ["Manette", "Manette"]], p.controle, "?")}</select></label>${champ("driver_rating", "Driver Rating", p.driver_rating)}
-          ${champ("twitch", "Chaîne Twitch", p.twitch, "text", 'placeholder="nom ou twitch.tv/nom"')}${champ("avatar", "Avatar (chemin sous assets/img/)", p.avatar)}
+          ${champ("psn", "PSN (plusieurs : séparer par /)", p.psn)}${champ("twitch", "Chaîne Twitch", p.twitch, "text", 'placeholder="nom ou twitch.tv/nom"')}${champ("avatar", "Avatar (chemin sous assets/img/)", p.avatar)}
           <label>Actif<select name="actif">${options([["TRUE", "Oui"], ["FALSE", "Non"]], no(p.actif) ? "FALSE" : "TRUE")}</select></label>
           <label class="wide">Bio<textarea name="bio" rows="2">${esc(p.bio || "")}</textarea></label></div>
         <div class="adm-actions"><button class="btn" type="submit">Enregistrer</button><button class="btn ghost" type="button" data-pcancel>Annuler</button></div></form>` : ""}
-      <table class="adm-table"><thead><tr><th>Pseudo</th><th>Lobby</th><th>Contrôle</th><th>DR</th><th>Twitch</th><th>Actif</th><th></th></tr></thead><tbody>
-      ${ps.map(x => { const e = engagements().find(y => y.pilote_id === x.pilote_id); return `<tr><td>${esc(x.pseudo)}</td><td>${esc(e ? (e.role === "Réserve" ? "Réserve" : lobbyDe(x.pilote_id)) : "")}</td><td>${esc(x.controle || "")}</td><td>${esc(x.driver_rating || "")}</td>
+      <table class="adm-table"><thead><tr><th>Pseudo</th><th>PSN</th><th>Lobby</th><th>Contrôle</th><th>DR</th><th>Twitch</th><th>Actif</th><th></th></tr></thead><tbody>
+      ${ps.map(x => { const e = engagements().find(y => y.pilote_id === x.pilote_id); return `<tr><td>${esc(x.pseudo)}</td><td>${esc(x.psn || "")}</td><td>${esc(e ? (e.role === "Réserve" ? "Réserve" : lobbyDe(x.pilote_id)) : "")}</td><td>${esc(x.controle || "")}</td><td>${esc(x.driver_rating || "")}</td>
         <td>${x.twitch ? `<a href="https://www.twitch.tv/${esc(x.twitch)}" target="_blank" rel="noopener">${esc(x.twitch)}</a>` : ""}</td><td>${no(x.actif) ? "Non" : "Oui"}</td><td><button type="button" class="lien" data-pedit="${esc(x.pilote_id)}">Modifier</button></td></tr>`; }).join("")}</tbody></table>`;
   }
 
@@ -580,7 +583,7 @@
       if (L.some(l => !l.pilote_id)) return toast("Chaque ligne doit avoir un pilote.", "err");
       if (new Set(L.map(l => l.pilote_id)).size !== L.length) return toast("Un pilote apparaît deux fois.", "err");
       // Noms lus sur la capture et associés à la main : retenus dans _PSN pour les prochaines lectures
-      const nouveaux = L.filter(l => l.lu && l.pilote_id && norm(l.lu) !== norm(pseudo(l.pilote_id)) && !D._PSN.some(x => norm(x.psn) === norm(l.lu)));
+      const nouveaux = L.filter(l => l.lu && l.pilote_id && trouverPilote(l.lu) !== l.pilote_id);
       if (nouveaux.length) await envoyer("psn", { lignes: nouveaux.map(l => ({ psn: l.lu, pilote_id: l.pilote_id })) }, `${nouveaux.length} PSN retenu(s)`);
       const cid = ui.res, cat = ui.lobby;
       const r = await envoyer("resultats", { course_id: cid, categorie_id: cat, terminer: $("terminer").checked, lignes: L.map((l, i) => ({ pilote_id: l.pilote_id, statut: l.statut, meilleur_tour: l.meilleur_tour, note: l.note, position: i + 1 })) }, `Résultats ${cid} ${cat}`);
@@ -640,7 +643,7 @@
       const x = D._Inscriptions.find(i => String(i.id) === carte.dataset.id);
       if ("isave" in d) return envoyer("inscription", { id: x.id, statut: carte.querySelector("[data-istatut]").value, note_admin: carte.querySelector("[data-inote]").value }, "Demande de " + x.pseudo_discord);
       if (d.icreer) {
-        const r = await envoyer("pilote", { pilote: { pseudo: x.pseudo_discord, controle: x.controle || "", driver_rating: x.driver_rating || "", twitch: x.twitch || "", region: x.region || "", actif: true } }, "Pilote " + x.pseudo_discord);
+        const r = await envoyer("pilote", { pilote: { pseudo: x.pseudo_discord, psn: x.psn || "", controle: x.controle || "", driver_rating: x.driver_rating || "", twitch: x.twitch || "", region: x.region || "", actif: true } }, "Pilote " + x.pseudo_discord);
         if (!r.ok || r.demo) return;
         if (d.icreer === "reserve") await envoyer("engagement", { engagement: { saison_id: saison, pilote_id: r.pilote.pilote_id, role: "Réserve", ordre_reserve: reserves().length + 1 } }, x.pseudo_discord + " en réserve");
         await envoyer("inscription", { id: x.id, statut: d.icreer === "reserve" ? "Réserve" : "Acceptée" }, "Demande de " + x.pseudo_discord);

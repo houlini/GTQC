@@ -23,7 +23,7 @@ const ONGLETS_INTERNES = ['Forfaits_Commandite', 'Lobbys'];
 // Réglages gardés secrets jusqu'à quelques jours avant la course (même liste que outils/exporter_donnees.py)
 const REGLAGES = ['heure_du_jour', 'vitesse_temps', 'conditions', 'arret_pit_min', 'conso_carburant', 'usure_pneus',
   'carburant_initial_l', 'ravitaillement', 'temps_pit_s'];
-const CHAMPS_PILOTE = ['pseudo', 'numero', 'region', 'controle', 'driver_rating', 'equipe_id', 'avatar', 'bio', 'actif', 'twitch'];
+const CHAMPS_PILOTE = ['pseudo', 'numero', 'region', 'controle', 'driver_rating', 'equipe_id', 'avatar', 'bio', 'actif', 'twitch', 'psn'];
 const STATUTS_INSCRIPTION = ['Nouvelle', 'Contactée', 'Acceptée', 'Réserve', 'Refusée', 'Archivée'];
 const CLE_CACHE = 'donnees-v2';
 
@@ -431,7 +431,7 @@ function dossierPhotos() {
   return dossier;
 }
 
-/** Crée ou modifie un pilote (pseudo seulement : aucune info personnelle dans cet onglet). */
+/** Crée ou modifie un pilote (pseudo et PSN, publics ; aucune autre info personnelle dans cet onglet). */
 function pilote(c) {
   const p = c.pilote || {};
   if (!p.pseudo && !p.pilote_id) return { ok: false, erreur: 'pseudo' };

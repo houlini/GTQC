@@ -69,7 +69,7 @@
     const reserve = (D.Engagements.find(e => e.saison_id === s && e.pilote_id === id) || {}).role === "Réserve";
     const tag = st.tag || (reserve ? "R" : "");
     const team = G.teamOf(id, s);
-    const chips = [tag === "R" ? "Réserve" : tag ? "Division " + tag.slice(1) : "", team && team.nom, p.controle, p.driver_rating && "Rating " + p.driver_rating].filter(Boolean);
+    const chips = [tag === "R" ? "Réserve" : tag ? "Division " + tag.slice(1) : "", team && team.nom, p.controle, p.driver_rating && "Rating " + p.driver_rating, p.psn && "PSN " + String(p.psn).split("/")[0].trim()].filter(Boolean);
     const box = (v, l) => `<div class="sbox"><b>${esc(v ?? "–")}</b><span>${l}</span></div>`;
     const rows = st.rows.map(r => {
       const c = G.circ(r.m);
