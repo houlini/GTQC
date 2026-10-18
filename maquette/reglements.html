@@ -1,0 +1,47 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GTQC Règlements</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Code de conduite, code d'affichage des livrées, lobbys, points et stewards de la ligue GTQC.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<header class="topbar solid" id="topbar">
+  <a class="brand" href="index.html" aria-label="GTQC, accueil"><img id="logo" alt="GTQC"></a>
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="index.html">Courses</a>
+    <a href="pilotes.html">Pilotes</a>
+    <a href="#">Team</a>
+    <a href="#">Événements</a>
+    <a href="reglements.html" aria-current="page">Règlements</a>
+    <a id="twitchTop" target="_blank" rel="noopener">Twitch</a>
+  </nav>
+  <button class="menu-btn" type="button" aria-label="Menu"><span aria-hidden="true">≡</span> Menu</button>
+</header>
+
+<main class="rules-page">
+  <div class="rp-head">
+    <h1 class="dp-title">Règlements</h1>
+    <p class="rp-intro" id="intro"></p>
+  </div>
+  <div class="rp-body">
+    <nav class="rp-toc" id="toc" aria-label="Sections"></nav>
+    <div class="rp-content" id="content"></div>
+  </div>
+</main>
+
+<section class="partners" aria-label="Partenaires"><div class="partner-row" id="partners"></div></section>
+<footer class="foot">
+  <div class="foot-grid">
+    <div><img class="foot-logo" id="logo2" alt="GTQC"><p class="small">Gran Turismo Québec · Communauté de sim racing 100 % québécoise</p></div>
+    <div><h3>Soir de course</h3><div id="horaire"></div></div>
+    <div><h3>Suivre la ligue</h3><ul class="links" id="links"></ul><p class="mail" id="mail"></p></div>
+  </div>
+  <p class="small copy">Maquette, octobre 2026 · Données : Google Sheet GTQC_Base_Donnees</p>
+</footer>
+
+<script src="data.js"></script>
+<script src="commun.js"></script>
+<script src="reglements.js"></script>
