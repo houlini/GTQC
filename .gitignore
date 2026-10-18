@@ -1,0 +1,10 @@
+# Données personnelles (courriels, paiements) : ne jamais publier sur GitHub
+_prive/
+
+# Photos brutes reçues (contiennent des courriels / téléphones privés).
+# Le site utilise les copies classées dans assets/img/ (voir outils/classer_photos.py)
+Photos/
+
+# Premier export de la base (obsolète, contient les noms réels des pilotes).
+# La référence est maintenant le Google Sheet GTQC_Base_Donnees.
+database/GTQC_Base_Donnees.xlsx
