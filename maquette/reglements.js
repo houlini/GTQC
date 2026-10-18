@@ -21,6 +21,17 @@
       <p class="legend-zones"><span class="up">Montée possible au Lobby 1</span><span class="down">Descente possible au Lobby 2</span><span>+${esc(G.cfg.points_meilleur_tour || 1)} point pour le meilleur tour</span></p></div>`;
   }
 
+  // Livrées officielles S02 (images découpées des captures du Livery Creator, sans le nom du créateur)
+  const LIVREES = [
+    ["Gr.3", "30 août 2026", [["renault-rs01", "Renault R.S.01 GT3"], ["nissan-gtr", "Nissan GT-R Nismo GT3"], ["genesis-x-vgt", "Genesis X Gran Berlinetta VGT"],
+      ["ferrari-458", "Ferrari 458 Italia GT3"], ["chevrolet-corvette", "Chevrolet Corvette C7 Gr.3"], ["ford-gt", "Ford GT LM Race Car Spec II"], ["subaru-wrx", "Subaru WRX Gr.3"]]],
+    ["Gr.4", "14 septembre 2026", [["bmw-m4", "BMW M4 Gr.4"], ["honda-nsx", "Honda NSX Gr.4"], ["subaru-wrx", "Subaru WRX Gr.4"]]],
+  ];
+  const liveries = () => LIVREES.map(([cat, date, cars]) => `<div class="lv-group">
+      <h3>Livrées ${cat} <span class="muted">· version du ${date}</span></h3>
+      <ul class="lv-grid">${cars.map(([f, nom]) => `<li><figure><img src="${G.IMG}livrees/s02-${cat.toLowerCase().replace(".", "")}-${f}.jpg" alt="Livrée GTQC ${esc(nom)}" loading="lazy"><figcaption>${esc(nom)}</figcaption></figure></li>`).join("")}</ul>
+    </div>`).join("") + `<p class="muted small">Dans GT7 : Showcase › Livrées, recherche par tag « GTQC ».</p>`;
+
   $("intro").textContent = "En participant au championnat GTQC, chaque pilote accepte le code de conduite et le code d'affichage. Les décisions des admins et des stewards sont finales.";
   $("toc").innerHTML = sections.map(s => `<a href="#${slug(s)}">${esc(s)}</a>`).join("");
   $("content").innerHTML = sections.map(s => {
@@ -31,6 +42,7 @@
       <h2>${n ? `<span class="rp-n">${n}</span>` : ""}${esc(title)}</h2>
       <ol class="rp-list">${list.map(r => `<li>${r.titre ? `<h3>${esc(r.titre)}</h3>` : ""}<p>${esc(r.texte)}</p></li>`).join("")}</ol>
       ${/lobby|point/i.test(s) ? pointsGrid() : ""}
+      ${/livr/i.test(s) ? `<div class="lv">${liveries()}</div>` : ""}
     </section>`;
   }).join("");
 

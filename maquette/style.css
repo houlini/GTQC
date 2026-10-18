@@ -336,6 +336,13 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
 .legend-zones span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; vertical-align: -1px; background: rgba(255,255,255,.12); }
 .legend-zones .up::before { background: rgba(230,255,0,.5); }
 .legend-zones .down::before { background: rgba(0,72,255,.7); }
+.lv { display: grid; gap: 24px; margin-top: 8px; }
+.lv-group { display: grid; gap: 12px; }
+.lv-group h3 { margin: 0; font-size: 20px; }
+.lv-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.lv-grid figure { margin: 0; border-radius: 12px; overflow: hidden; background: #1A1A1A; border: 1px solid var(--line); }
+.lv-grid img { display: block; width: 100%; height: auto; aspect-ratio: 640 / 291; object-fit: cover; }
+.lv-grid figcaption { padding: 10px 12px; font-size: 14px; font-weight: 600; }
 @media (max-width: 860px) {
   .rules-page { padding: 96px var(--gutter-r) 32px var(--gutter-l); }
   .rp-body { grid-template-columns: 1fr; gap: 24px; }
