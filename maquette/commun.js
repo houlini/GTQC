@@ -135,7 +135,8 @@ window.GT = (() => {
 
   // ---------- En-tête et pied de page
   function chrome() {
-    $("logo").src = IMG + (cfg.logo || "logo/gtqc-logo.png");
+    // Sur fond marine : version sans fond blanc, avec halo jaune (outils/logo_gtqc_fonce.py)
+    $("logo").src = IMG + (cfg.logo_fond_fonce || "logo/gtqc-logo-fonce.png");
     if ($("logo2")) $("logo2").src = $("logo").src;
     if (cfg.twitch_url) $("twitchTop").href = cfg.twitch_url; else $("twitchTop").hidden = true;
     if ($("partners")) $("partners").innerHTML = D.Sponsors.filter(s => yes(s.afficher)).sort((a, b) => a.ordre - b.ordre).map(s => {

@@ -32,7 +32,7 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
   transition: background .25s;
 }
 .topbar.solid { background: rgba(0, 22, 43, .92); backdrop-filter: blur(8px); }
-.brand img { height: 32px; width: auto; display: block; }
+.brand img { height: 38px; width: auto; display: block; }
 .nav { margin-left: auto; display: flex; gap: 30px; }
 .nav a { text-decoration: none; font-weight: 600; font-size: 16px; }
 .nav a:hover, .nav a[aria-current] { color: var(--accent); }
@@ -161,7 +161,7 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
 .foot { border-top: 1px solid var(--line); padding: 48px calc(var(--gutter-r) + 48px) 40px calc(var(--gutter-l) + 48px); color: var(--muted); }
 .foot-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
 .foot h3 { margin: 0 0 12px; color: var(--ink); font-size: 16px; font-weight: 700; }
-.foot-logo { height: 36px; width: auto; }
+.foot-logo { height: 42px; width: auto; }
 .sched-h { color: var(--ink); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin: 8px 0 4px; }
 .sched { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; font-size: 14px; margin: 0; }
 .sched dt { color: var(--ink); font-variant-numeric: tabular-nums; }
