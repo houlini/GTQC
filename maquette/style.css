@@ -341,3 +341,6 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
   .rp-toc a { border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
   .rp-list { grid-template-columns: 1fr; }
 }
+
+.res-title { display: grid; gap: 12px; }
+.res-title .sub { color: var(--muted); margin: 0; font-size: 14px; }

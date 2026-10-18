@@ -167,11 +167,29 @@
   });
   $("moreBtn").addEventListener("click", () => { showAll = !showAll; renderStandings(); if (!showAll) $("classement").scrollIntoView(); });
 
-  // ---------- Résultats : position au classement après chaque manche
+  // ---------- Résultats : position à l'arrivée de chaque course, ou position au classement général après chaque manche
+  let chartMode = "arrivee";
+  function finishes() {
+    const rs = G.pilotRounds(season), out = {}, cat = {};
+    rs.forEach((m, i) => G.results(m.course_id).forEach(r => {
+      if (r.position) { (out[r.pilote_id] = out[r.pilote_id] || [])[i] = r.position; (cat[r.pilote_id] = cat[r.pilote_id] || [])[i] = r.categorie_id; }
+    }));
+    return { rs, out, cat };
+  }
   function renderChart() {
-    const { rs, out } = G.positions(season);
+    const canFinish = G.isCurrent(season);  // la S1 n'a que des points, pas de positions
+    if (!canFinish) chartMode = "classement";
+    $("chartMode").innerHTML = canFinish ? [["arrivee", "Arrivée de la course"], ["classement", "Classement général"]]
+      .map(([k, l]) => `<button type="button" aria-pressed="${k === chartMode}" data-c="${k}">${l}</button>`).join("") : "";
+    $("chartSub").textContent = chartMode === "arrivee"
+      ? "Position à l'arrivée dans le lobby du pilote (D1 ou D2) à chaque manche."
+      : "Position au classement général (points cumulés) après chaque manche.";
+    const ranking = G.positions(season);
+    const { rs, out, cat } = chartMode === "arrivee" ? finishes() : { ...ranking, cat: {} };
     const last = rs.length - 1;
-    const all = Object.keys(out).sort((a, b) => (out[a][last] || 99) - (out[b][last] || 99));
+    const rk = ranking.out, rl = ranking.rs.length - 1;
+    // Liste des pilotes triée par classement général, quel que soit le mode
+    const all = Object.keys(rk).filter(id => out[id]).sort((a, b) => (rk[a][rl] || 99) - (rk[b][rl] || 99));
     if (!picked) picked = all.slice(0, 5);
     $("pickerPop").innerHTML = all.map(id => `<label><input type="checkbox" value="${esc(id)}" ${picked.includes(id) ? "checked" : ""}> ${esc(G.name(id))}</label>`).join("");
     const W = 1100, H = 460, L = 40, R = 24, T = 18, B = 46;
@@ -187,13 +205,18 @@
       const col = G.COLORS[k % G.COLORS.length], pts = (out[id] || []).map((p, i) => p ? [x(i), y(p), p, i] : null).filter(Boolean);
       if (!pts.length) return;
       s += `<polyline fill="none" stroke="${col}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="${pts.map(p => p[0] + "," + p[1]).join(" ")}"/>`;
-      pts.forEach(p => { s += `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="${col}"><title>${esc(G.name(id))} · M${rs[p[3]].manche} : ${p[2]}e</title></circle>`; });
+      pts.forEach(p => {
+        const lob = (cat[id] || [])[p[3]];
+        const what = chartMode === "arrivee" ? `${p[2]}e à l'arrivée${lob ? " (" + lob + ")" : ""}` : `${p[2]}e au classement`;
+        s += `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="${col}"><title>${esc(G.name(id))} · M${rs[p[3]].manche} : ${what}</title></circle>`;
+      });
     });
     const c = $("chart");
     c.setAttribute("viewBox", `0 0 ${W} ${H}`);
     c.innerHTML = rs.length ? s : `<text x="20" y="40">Aucune manche terminée.</text>`;
-    $("legend").innerHTML = picked.map((id, k) => `<span style="--c:${G.COLORS[k % G.COLORS.length]}"><i></i>${esc(G.name(id))} · ${out[id] && out[id][last] ? out[id][last] + "e" : "–"}</span>`).join("");
+    $("legend").innerHTML = picked.map((id, k) => `<span style="--c:${G.COLORS[k % G.COLORS.length]}"><i></i>${esc(G.name(id))} · ${rk[id] && rk[id][rl] ? rk[id][rl] + "e au classement" : "–"}</span>`).join("");
   }
+  $("chartMode").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; chartMode = b.dataset.c; renderChart(); });
   $("pickerBtn").addEventListener("click", () => { const p = $("pickerPop"); p.hidden = !p.hidden; $("pickerBtn").setAttribute("aria-expanded", String(!p.hidden)); });
   document.addEventListener("click", e => { if (!e.target.closest("#picker")) { $("pickerPop").hidden = true; $("pickerBtn").setAttribute("aria-expanded", "false"); } });
   $("pickerPop").addEventListener("change", e => {
