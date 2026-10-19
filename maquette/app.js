@@ -34,8 +34,9 @@
       if (dist === 0) b.setAttribute("aria-current", "date"); else b.removeAttribute("aria-current");
       if (mobile()) { li.style.transform = li.style.opacity = li.style.pointerEvents = ""; return; }
       li.style.transform = `translateY(calc(-50% + ${dist * STEP}px))`;
-      li.style.opacity = [1, .72, .45, .2][a] ?? 0;
-      li.style.pointerEvents = a > 3 ? "none" : "";
+      // 2 dates de chaque côté : la 3e passerait sous les flèches
+      li.style.opacity = [1, .72, .4][a] ?? 0;
+      li.style.pointerEvents = a > 2 ? "none" : "";
     });
     if (mobile()) { const on = $("rail").querySelector(".on"); on && on.scrollIntoView({ inline: "center", block: "nearest" }); }
   }
@@ -160,8 +161,9 @@
         <div class="muted">${esc(G.fmtLong.format(G.asDate(m.date)))}</div></div>
       ${src ? `<div class="dr-trace"><img src="${src}" alt="Tracé de ${esc(c.nom)}"></div>` : ""}
       ${stats.length ? `<div class="stats">${stats.map(s => `<div><b>${esc(String(s[1]).replace(".", ","))}</b><span>${s[0]}</span></div>`).join("")}</div>` : ""}
-      ${kv.length ? `<dl class="kv">${kv.map(([k, v]) => `<div${v.length > 40 ? ' class="wide"' : ""}><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
-      ${m.reglages_caches ? `<p class="secret">Réglages de course dévoilés ${m.reglages_reveles_le ? "le " + esc(G.fmtLong.format(G.asDate(m.reglages_reveles_le))) : "quelques jours avant la manche"}.</p>` : ""}
+      ${kv.length || m.reglages_caches ? `<div class="dr-set"><h3>Réglages de course</h3>
+        ${kv.length ? `<dl class="kv">${kv.map(([k, v]) => `<div${v.length > 40 ? ' class="wide"' : ""}><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
+        ${m.reglages_caches ? `<p class="secret">Les autres réglages seront dévoilés ${m.reglages_reveles_le ? "le " + esc(G.fmtLong.format(G.asDate(m.reglages_reveles_le))) : "quelques jours avant la manche"}.</p>` : ""}</div>` : ""}
       ${shots.length ? `<div class="shots"><h3>Captures <small>${shots.length}</small></h3><div class="shot-grid">${shots.map((p, i) => `<button type="button" class="shot" data-shot="${i}" aria-label="Agrandir la capture ${i + 1}${p.legende ? " : " + esc(p.legende) : ""}"><img src="${esc(G.photoSrc(p, 480))}" alt="" loading="lazy"></button>`).join("")}</div></div>` : ""}
       ${vodList.length ? `<div class="vods"><h3>Revoir la course</h3>${vodList.map(v => `<a class="vod ${v.plateforme.toLowerCase()}" href="${esc(v.url)}" target="_blank" rel="noopener"><span>${esc(v.plateforme)}</span>${esc(v.titre || (v.categorie_id ? "Division " + v.categorie_id.slice(1) : "Rediffusion"))}</a>`).join("")}</div>` : ""}
       ${m.note_publique ? `<p class="muted">${esc(m.note_publique)}</p>` : ""}
