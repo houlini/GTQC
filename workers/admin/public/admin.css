@@ -85,3 +85,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .verif h3 { margin: 0; }
 .verif-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .verif-img { max-width: 100%; width: 320px; border-radius: 8px; border: 1px solid var(--line); }
+/* Réserves : colonne de gauche un peu plus large, listes « Promouvoir » contenues dans la carte */
+.adm-cols.reserves { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; }
+.adm-cols.reserves .adm-table { table-layout: fixed; }
+.adm-cols.reserves .adm-table th:nth-child(1) { width: 78px; }
+.adm-cols.reserves .adm-table th:nth-child(3) { width: 64px; }
+.adm-cols.reserves .adm-table th:nth-child(4) { width: 170px; }
+.adm-cols.reserves .adm-table td { overflow-wrap: anywhere; }
+.adm-cols.reserves .adm-table select[data-promo] { min-width: 0; width: 100%; }
+.adm-cols.reserves .court { width: 100%; }
+@media (max-width: 1000px) { .adm-cols.reserves { grid-template-columns: 1fr; } }

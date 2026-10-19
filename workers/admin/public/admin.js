@@ -352,9 +352,9 @@
     const a = ui.absBrouillon.lignes;
     const pris = new Set(Object.values(a).map(x => x.remplacant_id).filter(Boolean));
     return `<div class="adm-head"><h1>Réserves <small>${esc(saison)}</small></h1><div class="adm-actions">${choixSaison()}</div></div>
-      <div class="adm-cols">
+      <div class="adm-cols reserves">
         <div class="adm-card"><h2>Pilotes de réserve</h2><p class="muted">Ordre de priorité pour les remplacements (1 = appelé en premier).</p>
-          <table class="adm-table"><thead><tr><th>Ordre</th><th>Pilote</th><th>Remplacements</th><th></th></tr></thead><tbody>
+          <table class="adm-table"><thead><tr><th>Ordre</th><th>Pilote</th><th class="num">Rempl.</th><th></th></tr></thead><tbody>
           ${rs.map(e => `<tr><td><input type="number" min="1" class="court" data-ordre="${esc(e.pilote_id)}" value="${esc(e.ordre_reserve ?? "")}"></td><td>${esc(pseudo(e.pilote_id))}</td>
             <td class="num">${D.Remplacements.filter(r => r.remplacant_id === e.pilote_id && String(r.course_id).startsWith(saison)).length}</td>
             <td class="nowrap"><select data-promo="${esc(e.pilote_id)}"><option value="">Promouvoir…</option><option value="D1">Titulaire Lobby 1</option><option value="D2">Titulaire Lobby 2</option><option value="retirer">Retirer des réserves</option></select></td></tr>`).join("") || `<tr><td colspan="4" class="muted">Aucun pilote de réserve.</td></tr>`}</tbody></table>
