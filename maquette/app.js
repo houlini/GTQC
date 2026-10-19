@@ -268,30 +268,50 @@
     const full = picked.length >= MAX_PICK;
     $("pickerPop").innerHTML = (full ? `<p class="max">Maximum ${MAX_PICK} pilotes : décoche-en un pour en ajouter un autre.</p>` : "")
       + all.map(id => `<label><input type="checkbox" value="${esc(id)}" ${picked.includes(id) ? "checked" : full ? "disabled" : ""}> ${esc(G.name(id))}</label>`).join("");
-    const W = 1100, H = 460, L = 40, R = 24, T = 18, B = 46;
+    // Le graphique se dessine à la largeur réelle de sa boîte : le texte garde sa taille, rien ne déborde sur mobile
+    const W = Math.max(300, Math.round($("chart").parentElement.clientWidth || 1100)), small = W < 640;
+    const H = small ? 320 : 460, L = small ? 30 : 40, R = small ? 14 : 24, T = 18, B = small ? 38 : 46;
+    $("chart").style.height = H + "px";
     const maxPos = Math.max(5, ...picked.flatMap(id => (out[id] || []).filter(Boolean)));
     const x = i => L + (rs.length <= 1 ? (W - L - R) / 2 : i * (W - L - R) / (rs.length - 1));
     const y = p => T + (p - 1) * (H - T - B) / Math.max(1, maxPos - 1);
     let s = `<g class="g">`;
-    const stepY = maxPos > 20 ? 5 : maxPos > 10 ? 2 : 1;
+    const stepY = maxPos > 20 ? 5 : maxPos > (small ? 8 : 10) ? 2 : 1;
     for (let p = 1; p <= maxPos; p += stepY) s += `<line x1="${L}" x2="${W - R}" y1="${y(p)}" y2="${y(p)}"/><text x="${L - 12}" y="${y(p) + 4}" text-anchor="end">${p}</text>`;
     rs.forEach((m, i) => { s += `<line x1="${x(i)}" x2="${x(i)}" y1="${T}" y2="${H - B}" stroke-dasharray="2 6"/><text x="${x(i)}" y="${H - 18}" text-anchor="middle">M${m.manche}</text>`; });
     s += `</g>`;
     picked.forEach((id, k) => {
       const col = G.COLORS[k % G.COLORS.length], pts = (out[id] || []).map((p, i) => p ? [x(i), y(p), p, i] : null).filter(Boolean);
       if (!pts.length) return;
-      s += `<polyline fill="none" stroke="${col}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="${pts.map(p => p[0] + "," + p[1]).join(" ")}"/>`;
+      // Une ligne sur deux en pointillé : les pilotes se distinguent aussi sans la couleur
+      s += `<polyline fill="none" stroke="${col}" stroke-width="3"${k % 2 ? ' stroke-dasharray="9 6"' : ""}stroke-linejoin="round" stroke-linecap="round" points="${pts.map(p => p[0] + "," + p[1]).join(" ")}"/>`;
       pts.forEach(p => {
         const lob = (cat[id] || [])[p[3]];
-        const what = chartMode === "arrivee" ? `${p[2]}e à l'arrivée${lob ? " (" + lob + ")" : ""}` : `${p[2]}e au classement`;
-        s += `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="${col}"><title>${esc(G.name(id))} · M${rs[p[3]].manche} : ${what}</title></circle>`;
+        const ord = p[2] === 1 ? "1er" : p[2] + "e";
+        const what = chartMode === "arrivee" ? `${ord} à l'arrivée${lob ? " (" + lob + ")" : ""}` : `${ord} au classement`;
+        const info = `${G.name(id)} · M${rs[p[3]].manche} : ${what}`;
+        // Point visible + zone de toucher plus large (doigt) qui affiche le détail sous le graphique
+        s += `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="${col}"/><circle class="hit" cx="${p[0]}" cy="${p[1]}" r="14" data-info="${esc(info)}" data-c="${col}"><title>${esc(info)}</title></circle>`;
       });
     });
     const c = $("chart");
     c.setAttribute("viewBox", `0 0 ${W} ${H}`);
     c.innerHTML = rs.length ? s : `<text x="20" y="40">Aucune manche terminée.</text>`;
-    $("legend").innerHTML = picked.map((id, k) => `<span style="--c:${G.COLORS[k % G.COLORS.length]}"><i></i>${esc(G.name(id))} · ${rk[id] && rk[id][rl] ? (rk[id][rl] === 1 ? "1er" : rk[id][rl] + "e") : "–"}</span>`).join("");
+    $("legend").innerHTML = picked.map((id, k) => `<span style="--c:${G.COLORS[k % G.COLORS.length]}"><i${k % 2 ? ' class="dash"' : ""}></i>${esc(G.name(id))} · ${rk[id] && rk[id][rl] ? (rk[id][rl] === 1 ? "1er" : rk[id][rl] + "e") : "–"}</span>`).join("");
   }
+  const showTip = e => {
+    const h = e.target.closest && e.target.closest(".hit");
+    if (!h) return;
+    $("chartTip").innerHTML = `<i style="--c:${esc(h.dataset.c)}"></i>${esc(h.dataset.info)}`;
+  };
+  if (matchMedia("(hover: hover)").matches) $("chartTip").textContent = "Survole un point du graphique pour voir le détail.";
+  $("chart").addEventListener("click", showTip);
+  $("chart").addEventListener("pointerover", e => { if (e.pointerType === "mouse") showTip(e); });
+  let chartW = 0;
+  addEventListener("resize", () => {
+    const w = $("chart").parentElement.clientWidth;
+    if (Math.abs(w - chartW) > 40) { chartW = w; renderChart(); }
+  });
   $("chartMode").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; chartMode = b.dataset.c; renderChart(); });
   $("pickerBtn").addEventListener("click", () => { const p = $("pickerPop"); p.hidden = !p.hidden; $("pickerBtn").setAttribute("aria-expanded", String(!p.hidden)); });
   document.addEventListener("click", e => { if (!e.target.closest("#picker")) { $("pickerPop").hidden = true; $("pickerBtn").setAttribute("aria-expanded", "false"); } });
