@@ -14,10 +14,21 @@
     s.src = src; s.onload = ok; s.onerror = () => ko(new Error(src));
     document.body.appendChild(s);
   });
+  // Téléchargés tout de suite, en même temps que les données ; exécutés dans l'ordre une fois les données là
+  const prechargement = (href, as) => {
+    const l = document.createElement("link");
+    l.rel = "preload"; l.as = as; l.href = href;
+    document.head.appendChild(l);
+  };
+  scripts.forEach(src => prechargement(src, "script"));
+  const IMG = /\/maquette\//.test(location.pathname) || location.protocol === "file:" ? "../assets/img/" : "assets/img/";
+  prechargement(IMG + "logo/gtqc-logo-fonce-web.webp", "image");
+
   const depuisApi = async () => {
     if (!API) throw new Error("pas d'API");
     const ctrl = new AbortController();
-    const minuteur = setTimeout(() => ctrl.abort(), 5000);
+    // L'API répond en ~0,1 à 0,3 s (cache du Worker) ; au-delà de 3 s, on passe à data.js
+    const minuteur = setTimeout(() => ctrl.abort(), 3000);
     try {
       const rep = await fetch(API + "/donnees", { signal: ctrl.signal });
       const d = await rep.json();

@@ -154,7 +154,7 @@ window.GT = (() => {
   // ---------- En-tête et pied de page
   function chrome() {
     // Sur fond marine : version sans fond blanc, avec halo jaune (outils/logo_gtqc_fonce.py)
-    $("logo").src = IMG + (cfg.logo_fond_fonce || "logo/gtqc-logo-fonce.png");
+    $("logo").src = IMG + (cfg.logo_fond_fonce || "logo/gtqc-logo-fonce-web.webp");
     if ($("logo2")) $("logo2").src = $("logo").src;
     if ($("partners")) $("partners").innerHTML = D.Sponsors.filter(s => yes(s.afficher)).sort((a, b) => a.ordre - b.ordre).map(s => {
       const logo = s.logo_fond_fonce || s.logo;
