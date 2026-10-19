@@ -62,7 +62,17 @@ window.GT = (() => {
   const traceSrc = m => circ(m).gt7_layout_id ? `${IMG}circuits/traces/${circ(m).gt7_layout_id.replace(/-reverse$/, "")}.png` : "";
   const startOf = (m, cat = "D2") => (D.Manches_Categories.find(x => x.course_id === m.course_id && x.categorie_id === cat) || {}).heure_depart || m.heure || "19:00";
   const label = m => m.type === "Tryout" ? "Tryouts" : m.type === "Spéciale" ? "Course ouverte au public" : m.type === "Finale" ? `Manche ${m.manche} · Finale` : `Manche ${m.manche}`;
-  const hm = h => String(h).replace(/^~\s*/, "≈ ").replace(":", " h ");
+  // Icônes du site : un seul trait (2 px, bouts arrondis), dessinées en SVG plutôt qu'en caractères
+  const ICONS = {
+    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    close: '<path d="M6 6l12 12M18 6L6 18"/>',
+    down: '<path d="M6 9l6 6 6-6"/>',
+    prev: '<path d="M15 6l-6 6 6 6"/>',
+    next: '<path d="M9 6l6 6-6 6"/>',
+    flag: '<path d="M5 21V4h11l-2 4 2 4H5"/>'
+  };
+  const icon = (n, s = 18) => `<svg class="ico" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]}</svg>`;
+  const hm = h =>String(h).replace(/^~\s*/, "≈ ").replace(":", " h ");
   /** Lobbys d'une manche, D1 puis D2 : départ (Manches_Categories, sinon Horaire), ouverture du lobby, tours. */
   const lobbies = m => ["D1", "D2"].map(cat => {
     const info = D.Manches_Categories.find(x => x.course_id === m.course_id && x.categorie_id === cat);
@@ -173,7 +183,7 @@ window.GT = (() => {
     const setOpen = open => {
       bar.classList.toggle("open", open);
       btn.setAttribute("aria-expanded", open);
-      btn.innerHTML = open ? '<span aria-hidden="true">×</span> Fermer' : '<span aria-hidden="true">≡</span> Menu';
+      btn.innerHTML = open ? icon("close") + " Fermer" : icon("menu") + " Menu";
     };
     setOpen(false);
     btn.addEventListener("click", () => setOpen(!bar.classList.contains("open")));
@@ -210,5 +220,5 @@ window.GT = (() => {
 
   return { D, IMG, yes, no, cfg, circuits, gt7, pilots, teams, $, esc, name, asDate, fmtLong, fmtShort, fmtMon, COLORS, num, flag,
     seasons, current, isCurrent, rounds, counted, results, pens, done, pilotRounds, isPast, nextRound, circ, layout, traceSrc,
-    startOf, label, hm, lobbies, roundPts, totals, ranked, official, standings, positions, teamOf, pilotStats, seasonsOf, chrome, vods, photos, photoSrc, API, twitchStatus };
+    startOf, label, hm, lobbies, icon, roundPts, totals, ranked, official, standings, positions, teamOf, pilotStats, seasonsOf, chrome, vods, photos, photoSrc, API, twitchStatus };
 })();

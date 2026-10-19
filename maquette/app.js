@@ -153,7 +153,7 @@
       return `<div class="card"><h3>${cat ? `Division ${cat.slice(1)} (${cat})` : "Résultats"} <small>${esc(meta)}</small></h3>
         ${rows.length ? `<table class="mini">${rows.map((r, i) => `<tr><td>${r.position || i + 1}</td><td><a class="plink" href="pilotes.html#${esc(r.pilote_id)}">${esc(G.name(r.pilote_id))}</a>${G.yes(r.meilleur_tour) ? '<span class="fl">MT</span>' : ""}</td><td>${r.points + (r.points_bonus || 0)}</td></tr>`).join("")}</table>`
           : `<p class="muted">${G.isPast(m) ? "Aucun résultat saisi." : "Résultats après la course."}</p>`}
-        ${pl.map(x => `<div class="pen">⚑ ${esc(G.name(x.pilote_id))} : ${esc(x.type === "Points" ? x.points + " pts" : x.type === "Temps" ? "+" + x.secondes + " s" : "avertissement")}</div>`).join("")}</div>`;
+        ${pl.map(x => `<div class="pen">${G.icon("flag", 16)} ${esc(G.name(x.pilote_id))} : ${esc(x.type === "Points" ? x.points + " pts" : x.type === "Temps" ? "+" + x.secondes + " s" : "avertissement")}</div>`).join("")}</div>`;
     }).join("");
     $("drawerBody").innerHTML = `
       <div class="dr-head"><span class="badge" style="justify-self:start">${esc(G.label(m))}</span><h2 id="drawerTitle">${esc(c.nom)}</h2>
@@ -177,8 +177,8 @@
   let shots = [], shotAt = 0;
   const viewer = document.createElement("dialog");
   viewer.className = "viewer";
-  viewer.innerHTML = `<button type="button" class="v-close" aria-label="Fermer">×</button><button type="button" class="v-nav prev" aria-label="Capture précédente">‹</button>
-    <figure><img alt=""><figcaption></figcaption></figure><button type="button" class="v-nav next" aria-label="Capture suivante">›</button>`;
+  viewer.innerHTML = `<button type="button" class="v-close" aria-label="Fermer">${G.icon("close", 22)}</button><button type="button" class="v-nav prev" aria-label="Capture précédente">${G.icon("prev", 26)}</button>
+    <figure><img alt=""><figcaption></figcaption></figure><button type="button" class="v-nav next" aria-label="Capture suivante">${G.icon("next", 26)}</button>`;
   document.body.append(viewer);
   const showShot = i => {
     shotAt = (i + shots.length) % shots.length;

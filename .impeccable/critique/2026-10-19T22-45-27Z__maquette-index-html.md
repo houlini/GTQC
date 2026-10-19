@@ -10,6 +10,7 @@ target_fingerprint: "sha256:17c404e0b466272be0846496266c7cbfcbbd313f9eeb1d3e1ab2
 target_path: "C:\\Users\\Admin\\Documents\\GitHub\\GTQC\\maquette\\index.html"
 timestamp: 2026-10-19T22-45-27Z
 slug: maquette-index-html
+closed: true
 ---
 Method: dual-agent (A: design review · B: detector + browser)
 

@@ -43,7 +43,7 @@
     const p = document.createElement("p");
     p.className = "offline"; p.setAttribute("role", "status");
     p.innerHTML = `<span><b>Données hors ligne.</b> Le classement et les résultats peuvent dater un peu.</span>
-      <button type="button">Réessayer</button><button type="button" class="x" aria-label="Fermer l'avis">×</button>`;
+      <button type="button">Réessayer</button><button type="button" class="x" aria-label="Fermer l'avis"><svg class="ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
     p.querySelector("button").addEventListener("click", () => location.reload());
     p.querySelector(".x").addEventListener("click", () => p.remove());
     document.body.appendChild(p);
