@@ -26,10 +26,32 @@
     } finally { clearTimeout(minuteur); }
   };
 
+  let secours = false;
+  // Petit avis en bas de l'écran : les données viennent de la copie du site, pas du classeur
+  const avisSecours = () => {
+    const p = document.createElement("p");
+    p.className = "offline"; p.setAttribute("role", "status");
+    p.innerHTML = `<span><b>Données hors ligne.</b> Le classement et les résultats peuvent dater un peu.</span>
+      <button type="button">Réessayer</button><button type="button" class="x" aria-label="Fermer l'avis">×</button>`;
+    p.querySelector("button").addEventListener("click", () => location.reload());
+    p.querySelector(".x").addEventListener("click", () => p.remove());
+    document.body.appendChild(p);
+  };
+  const erreurPage = () => {
+    const main = document.querySelector("main") || document.body;
+    main.innerHTML = `<div class="load-error" role="alert"><b>La page n'a pas pu se charger.</b>
+      Vérifie ta connexion, puis réessaie.<br><button type="button" class="pill-btn">Réessayer</button></div>`;
+    main.querySelector("button").addEventListener("click", () => location.reload());
+  };
+
   depuisApi()
-    .catch(err => { if (API) console.warn("API GTQC indisponible, données du dépôt :", err.message); return charger("data.js"); })
+    .catch(err => {
+      if (API) { console.warn("API GTQC indisponible, données du dépôt :", err.message); secours = true; }
+      return charger("data.js");
+    })
     .then(() => scripts.reduce((p, src) => p.then(() => charger(src)), Promise.resolve()))
-    .catch(err => console.error("Chargement de la page :", err))
+    .then(() => { if (secours) avisSecours(); })
+    .catch(err => { console.error("Chargement de la page :", err); erreurPage(); })
     // La page apparaît d'un coup (fondu) une fois remplie, même en cas d'erreur
     .finally(() => document.body.classList.add("pret"));
 })();

@@ -25,7 +25,7 @@
 
   // ---------- Liste
   function renderList() {
-    $("seasonSwitch").innerHTML = G.seasons.map(s => `<button type="button" role="tab" aria-selected="${s.saison_id === season}" data-s="${s.saison_id}">${esc(s.nom)}</button>`).join("");
+    $("seasonSwitch").innerHTML = G.seasons.map(s => `<button type="button" aria-pressed="${s.saison_id === season}" data-s="${s.saison_id}">${esc(s.nom)}</button>`).join("");
     const opts = G.isCurrent(season) ? [["tous", "Tous"], ["D1", "Division 1"], ["D2", "Division 2"], ["R", "Réserves"]] : [["tous", "Tous"], ["titulaires", "Titulaires"], ["R", "Réserves"]];
     $("filters").innerHTML = opts.map(([k, l]) => `<button type="button" aria-pressed="${k === filter}" data-f="${k}">${l}</button>`).join("");
     const list = roster().filter(p => filter === "tous" || (filter === "titulaires" ? !p.reserve : p.tag === filter));
@@ -88,7 +88,7 @@
           <span class="pd-rank">${/^\d+$/.test(st.rank) ? st.rank + "<sup>e</sup> au classement" : esc(st.rank)}</span>
           <h1>${esc(p.pseudo)}</h1>
           <div class="pd-chips">${chips.map(c => `<span>${esc(c)}</span>`).join("")}</div>
-          ${seasons.length > 1 ? `<div class="season-switch inline" id="pdSeason">${seasons.map(x => `<button type="button" aria-selected="${x.saison_id === s}" data-s="${x.saison_id}">${esc(x.nom)}</button>`).join("")}</div>` : ""}
+          ${seasons.length > 1 ? `<div class="season-switch inline" id="pdSeason">${seasons.map(x => `<button type="button" aria-pressed="${x.saison_id === s}" data-s="${x.saison_id}">${esc(x.nom)}</button>`).join("")}</div>` : ""}
         </div>
       </div>
       <div class="sboxes">

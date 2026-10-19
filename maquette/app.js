@@ -5,7 +5,7 @@
 
   // ---------- Saisons
   function renderSeasons() {
-    $("seasonSwitch").innerHTML = G.seasons.map(s => `<button type="button" role="tab" aria-selected="${s.saison_id === season}" data-s="${s.saison_id}">${esc(s.nom)}</button>`).join("");
+    $("seasonSwitch").innerHTML = G.seasons.map(s => `<button type="button" aria-pressed="${s.saison_id === season}" data-s="${s.saison_id}">${esc(s.nom)}</button>`).join("");
   }
   $("seasonSwitch").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
@@ -28,29 +28,45 @@
     [...$("rail").children].forEach(li => {
       const dist = +li.dataset.i - sel, a = Math.abs(dist);
       li.classList.toggle("on", dist === 0);
+      // Une seule date dans l'ordre de tabulation ; les flèches du clavier passent aux autres
+      const b = li.querySelector("button");
+      b.tabIndex = dist === 0 ? 0 : -1;
+      if (dist === 0) b.setAttribute("aria-current", "date"); else b.removeAttribute("aria-current");
       if (mobile()) { li.style.transform = li.style.opacity = li.style.pointerEvents = ""; return; }
       li.style.transform = `translateY(calc(-50% + ${dist * STEP}px))`;
-      li.style.opacity = [1, .5, .25, .1][a] ?? 0;
+      li.style.opacity = [1, .72, .45, .2][a] ?? 0;
       li.style.pointerEvents = a > 3 ? "none" : "";
     });
     if (mobile()) { const on = $("rail").querySelector(".on"); on && on.scrollIntoView({ inline: "center", block: "nearest" }); }
   }
-  const go = i => { sel = Math.max(0, Math.min(G.rounds(season).length - 1, i)); placeRail(); renderEvent(); };
+  const go = i => {
+    const n = Math.max(0, Math.min(G.rounds(season).length - 1, i));
+    if (n === sel) return false;
+    sel = n; placeRail(); renderEvent();
+    const m = G.rounds(season)[sel];
+    $("eventSr").textContent = `${G.label(m)}, ${G.circ(m).nom || m.circuit_id}, ${G.fmtLong.format(G.asDate(m.date))}.`;
+    return true;
+  };
   $("rail").addEventListener("click", e => { const li = e.target.closest("li"); if (li) go(+li.dataset.i); });
   $("railUp").addEventListener("click", () => go(sel - 1));
   $("railDown").addEventListener("click", () => go(sel + 1));
   let wheelLock = 0;
   document.querySelector(".rail-wrap").addEventListener("wheel", e => {
     if (mobile()) return;
+    // Au bout du calendrier, la molette fait défiler la page normalement
+    const dir = e.deltaY > 0 ? 1 : -1, last = G.rounds(season).length - 1;
+    if ((dir > 0 && sel >= last) || (dir < 0 && sel <= 0)) return;
     e.preventDefault();
     const t = Date.now(); if (t - wheelLock < 280) return; wheelLock = t;
-    go(sel + (e.deltaY > 0 ? 1 : -1));
+    go(sel + dir);
   }, { passive: false });
   document.addEventListener("keydown", e => {
     if (!$("drawer").hidden && e.key === "Escape") return closeDrawer();
     if (document.activeElement && document.activeElement.closest(".rail-wrap")) {
-      if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); go(sel + 1); }
-      if (e.key === "ArrowUp" || e.key === "ArrowLeft") { e.preventDefault(); go(sel - 1); }
+      const d = e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : e.key === "ArrowUp" || e.key === "ArrowLeft" ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      if (go(sel + d) && document.activeElement.closest(".rail")) $("rail").querySelector(".on button").focus();
     }
   });
 
@@ -77,7 +93,7 @@
     const lobbyRow = lobs.length && !res.length ? `<dl class="lobbies">${lobs.map(l => `<div>
         <dt><span class="div-tag ${l.cat}">${l.cat}</span></dt>
         <dd><b>${esc(G.hm(l.depart))}</b><span>${esc([l.ouverture && "lobby ouvert à " + G.hm(l.ouverture), l.tours && l.tours + " tours"].filter(Boolean).join(" · "))}</span></dd></div>`).join("")}</dl>` : "";
-    if (!res.length && !over && m.type !== "Tryout") extra = `<div class="count-wrap"><p class="count-lbl">${first ? `Départ ${first.cat} dans` : "Départ dans"}</p><div class="count" id="count" aria-label="Compte à rebours"></div></div>`;
+    if (!res.length && !over && m.type !== "Tryout") extra = `<div class="count-wrap"><p class="count-lbl">${first ? `Départ ${first.cat} dans` : "Départ dans"}</p><div class="count" id="count" aria-hidden="true"></div><p class="sr-only" id="countSr"></p></div>`;
     const reveal = m.reglages_reveles_le ? G.fmtShort.format(G.asDate(m.reglages_reveles_le)).replace(".", "") : "";
     const setNote = res.length || over || m.type === "Tryout" ? ""
       : m.reglages_caches ? `<p class="set-note">Réglages dévoilés ${reveal ? "le " + esc(reveal) : "quelques jours avant"}</p>`
@@ -107,6 +123,9 @@
           .map(([l, v]) => `<div><b>${String(Math.floor(v)).padStart(2, "0")}</b><span>${l}</span></div>`).join("");
       };
       tick(); timer = setInterval(tick, 1000);
+      // Les chiffres changent chaque seconde : les lecteurs d'écran lisent une phrase fixe à la place
+      const s0 = Math.max(0, (target - new Date()) / 1000), j = Math.floor(s0 / 86400), h = Math.floor(s0 % 86400 / 3600);
+      $("countSr").textContent = `${first ? "Départ " + first.cat : "Départ"} dans ${j} jour${j > 1 ? "s" : ""} et ${h} heure${h > 1 ? "s" : ""}.`;
     }
   }
 
@@ -148,6 +167,8 @@
       ${m.note_publique ? `<p class="muted">${esc(m.note_publique)}</p>` : ""}
       <div class="cards">${cards}</div>`;
     $("drawer").hidden = false;
+    // Le reste de la page devient inerte : le focus et les lecteurs d'écran restent dans la fiche
+    document.querySelectorAll("body > header, body > main, body > footer").forEach(el => { el.inert = true; });
     document.querySelector(".drawer-close").focus();
   }
   // ---------- Captures en grand (visionneuse)
@@ -172,7 +193,19 @@
   viewer.addEventListener("keydown", e => { if (e.key === "ArrowLeft") showShot(shotAt - 1); if (e.key === "ArrowRight") showShot(shotAt + 1); });
   $("drawerBody").addEventListener("click", e => { const b = e.target.closest("[data-shot]"); if (!b) return; showShot(+b.dataset.shot); viewer.showModal(); });
 
-  function closeDrawer() { $("drawer").hidden = true; const b = $("openDrawer"); b && b.focus(); }
+  function closeDrawer() {
+    $("drawer").hidden = true;
+    document.querySelectorAll("body > header, body > main, body > footer").forEach(el => { el.inert = false; });
+    const b = $("openDrawer"); b && b.focus();
+  }
+  // Tab boucle dans la fiche (le navigateur peut sinon sortir vers sa propre barre)
+  $("drawer").addEventListener("keydown", e => {
+    if (e.key !== "Tab") return;
+    const f = [...$("drawer").querySelectorAll("button, a[href], [tabindex]:not([tabindex='-1'])")].filter(el => el.offsetParent);
+    if (!f.length) return;
+    if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+  });
   $("drawer").addEventListener("click", e => { if (e.target.closest("[data-close]")) closeDrawer(); });
 
   // ---------- Classement (2 colonnes)
@@ -209,6 +242,7 @@
 
   // ---------- Résultats : position à l'arrivée de chaque course, ou position au classement général après chaque manche
   let chartMode = "arrivee";
+  const MAX_PICK = 10;
   function finishes() {
     const rs = G.pilotRounds(season), out = {}, cat = {};
     rs.forEach((m, i) => G.results(m.course_id).forEach(r => {
@@ -231,7 +265,9 @@
     // Liste des pilotes triée par classement général, quel que soit le mode
     const all = Object.keys(rk).filter(id => out[id]).sort((a, b) => (rk[a][rl] || 99) - (rk[b][rl] || 99));
     if (!picked) picked = all.slice(0, 5);
-    $("pickerPop").innerHTML = all.map(id => `<label><input type="checkbox" value="${esc(id)}" ${picked.includes(id) ? "checked" : ""}> ${esc(G.name(id))}</label>`).join("");
+    const full = picked.length >= MAX_PICK;
+    $("pickerPop").innerHTML = (full ? `<p class="max">Maximum ${MAX_PICK} pilotes : décoche-en un pour en ajouter un autre.</p>` : "")
+      + all.map(id => `<label><input type="checkbox" value="${esc(id)}" ${picked.includes(id) ? "checked" : full ? "disabled" : ""}> ${esc(G.name(id))}</label>`).join("");
     const W = 1100, H = 460, L = 40, R = 24, T = 18, B = 46;
     const maxPos = Math.max(5, ...picked.flatMap(id => (out[id] || []).filter(Boolean)));
     const x = i => L + (rs.length <= 1 ? (W - L - R) / 2 : i * (W - L - R) / (rs.length - 1));
@@ -261,7 +297,7 @@
   document.addEventListener("click", e => { if (!e.target.closest("#picker")) { $("pickerPop").hidden = true; $("pickerBtn").setAttribute("aria-expanded", "false"); } });
   $("pickerPop").addEventListener("change", e => {
     const id = e.target.value;
-    picked = e.target.checked ? [...picked, id].slice(-10) : picked.filter(v => v !== id);
+    picked = e.target.checked ? [...picked, id].slice(0, MAX_PICK) : picked.filter(v => v !== id);
     renderChart();
   });
 

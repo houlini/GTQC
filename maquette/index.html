@@ -26,14 +26,15 @@
   <!-- Calendrier : rail de dates + manche en vedette -->
   <section class="hero" id="hero" aria-label="Calendrier">
     <div class="hero-bg" id="heroBg"></div>
-    <div class="season-switch" id="seasonSwitch" role="tablist" aria-label="Saison"></div>
+    <div class="season-switch" id="seasonSwitch" role="group" aria-label="Saison"></div>
     <div class="rail-wrap">
       <button class="rail-arrow up" id="railUp" type="button" aria-label="Manche précédente">‹</button>
       <ol class="rail" id="rail" aria-label="Manches"></ol>
       <button class="rail-arrow down" id="railDown" type="button" aria-label="Manche suivante">›</button>
     </div>
     <span class="rail-line" aria-hidden="true"></span>
-    <div class="event" id="event" aria-live="polite"></div>
+    <div class="event" id="event"></div>
+    <p class="sr-only" id="eventSr" aria-live="polite"></p>
   </section>
 
   <!-- Classement -->
