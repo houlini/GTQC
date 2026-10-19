@@ -86,7 +86,19 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
 .winners div { display: grid; }
 .winners small { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
 .winners strong { font-size: 20px; font-weight: 700; }
-.ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+.ctas { display: flex; gap: 12px 18px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+/* Deux lobbys le même soir : une heure par division */
+.lobbies { display: flex; flex-wrap: wrap; gap: 14px 36px; margin: 0; }
+.lobbies div { display: flex; align-items: center; gap: 12px; }
+.lobbies dt .div-tag { display: block; }
+.lobbies dd { margin: 0; display: grid; }
+.lobbies b { font-size: 26px; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.lobbies dd span { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.count-wrap { display: grid; gap: 6px; }
+.count-lbl { margin: 0; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.set-note { margin: 0; font-size: 14px; color: var(--muted); }
+.set-note.on { color: var(--accent); font-weight: 600; }
+.kv .wide { grid-column: 1 / -1; }
 .pill-btn {
   display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 999px; cursor: pointer;
   background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 16px; padding: 13px 28px; text-decoration: none;

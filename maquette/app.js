@@ -70,7 +70,18 @@
         const w = res.filter(r => (r.categorie_id || "") === cat).sort((a, b) => (a.position || 99) - (b.position || 99) || b.points - a.points)[0];
         return `<div><small>Vainqueur${cat ? " " + esc(cat) : ""}</small><strong>${esc(G.name(w.pilote_id))}</strong></div>`;
       }).join("")}</div>`;
-    } else if (!over && m.type !== "Tryout") extra = `<div class="count" id="count" aria-label="Compte à rebours"></div>`;
+    }
+    // Deux lobbys le même soir : chaque division voit son heure. Le compte à rebours vise le premier départ.
+    const lobs = m.type === "Tryout" ? [] : G.lobbies(m);
+    const first = lobs.slice().sort((a, b) => String(a.depart).localeCompare(String(b.depart)))[0];
+    const lobbyRow = lobs.length && !res.length ? `<dl class="lobbies">${lobs.map(l => `<div>
+        <dt><span class="div-tag ${l.cat}">${l.cat}</span></dt>
+        <dd><b>${esc(G.hm(l.depart))}</b><span>${esc([l.ouverture && "lobby ouvert à " + G.hm(l.ouverture), l.tours && l.tours + " tours"].filter(Boolean).join(" · "))}</span></dd></div>`).join("")}</dl>` : "";
+    if (!res.length && !over && m.type !== "Tryout") extra = `<div class="count-wrap"><p class="count-lbl">${first ? `Départ ${first.cat} dans` : "Départ dans"}</p><div class="count" id="count" aria-label="Compte à rebours"></div></div>`;
+    const reveal = m.reglages_reveles_le ? G.fmtShort.format(G.asDate(m.reglages_reveles_le)).replace(".", "") : "";
+    const setNote = res.length || over || m.type === "Tryout" ? ""
+      : m.reglages_caches ? `<p class="set-note">Réglages dévoilés ${reveal ? "le " + esc(reveal) : "quelques jours avant"}</p>`
+      : `<p class="set-note on">Réglages disponibles</p>`;
     const badge = res.length || (over && m.type === "Tryout") ? `<span class="badge">Terminée</span>`
       : over ? `<span class="badge">Résultats à venir</span>`
       : nxt && nxt.course_id === m.course_id ? `<span class="badge next">Prochaine course</span>` : `<span class="badge">À venir</span>`;
@@ -80,14 +91,16 @@
       <div class="badges"><span class="badge">${esc(G.label(m))}</span>${badge}</div>
       <h1>${esc(c.nom || m.circuit_id)}</h1>
       <div class="where">${G.flag(c.code_pays)} ${esc(c.layout && c.layout !== "Complet" ? c.layout : c.pays || "")}</div>
-      <div class="when">${esc(G.fmtLong.format(G.asDate(m.date)))}${m.date_fin ? " au " + esc(G.fmtLong.format(G.asDate(m.date_fin))) : ""}${m.type !== "Tryout" ? " · " + esc(G.hm(G.startOf(m))) : ""}</div>
+      <div class="when">${esc(G.fmtLong.format(G.asDate(m.date)))}${m.date_fin ? " au " + esc(G.fmtLong.format(G.asDate(m.date_fin))) : ""}${m.type !== "Tryout" && !lobbyRow ? " · " + esc(G.hm(first ? first.depart : G.startOf(m))) : ""}</div>
+      ${lobbyRow}
       ${extra}
-      <div class="ctas"><button class="pill-btn" type="button" id="openDrawer">${res.length ? "Voir les résultats" : "Voir la manche"}</button>
-      ${(() => { const v = G.vods(m.course_id)[0]; return v ? `<a class="pill-btn ghost" href="${esc(v.url)}" target="_blank" rel="noopener">Revoir la course</a>` : ""; })()}</div>`;
+      <div class="ctas"><button class="pill-btn" type="button" id="openDrawer">${res.length ? "Voir les résultats" : setNote && !m.reglages_caches ? "Voir les réglages" : "Voir la manche"}</button>
+      ${(() => { const v = G.vods(m.course_id)[0]; return v ? `<a class="pill-btn ghost" href="${esc(v.url)}" target="_blank" rel="noopener">Revoir la course</a>` : ""; })()}
+      ${setNote}</div>`;
     $("openDrawer").addEventListener("click", openDrawer);
     clearInterval(timer);
     if ($("count")) {
-      const target = G.asDate(m.date, G.startOf(m));
+      const target = G.asDate(m.date, first ? first.depart : G.startOf(m));
       const tick = () => {
         const s = Math.max(0, Math.floor((target - new Date()) / 1000));
         $("count").innerHTML = [["jours", s / 86400], ["heures", s % 86400 / 3600], ["min", s % 3600 / 60], ["sec", s % 60]]
@@ -101,21 +114,23 @@
   function openDrawer() {
     const m = G.rounds(season)[sel], c = G.circ(m), g = G.layout(m), src = G.traceSrc(m);
     const stats = [["km", c.longueur_km], ["virages", c.virages], ["m de ligne droite", g.ligne_droite_m]].filter(s => s[1]);
-    const kv = [["Voitures", m.groupe_voiture], ["Moment de la journée", [m.heure_du_jour, m.vitesse_temps].filter(Boolean).join(" ")],
+    const cars = D.Voitures.filter(v => v.saison_id === season && v.groupe === m.groupe_voiture).map(v => v.voiture);
+    const kv = [["Voitures", [m.groupe_voiture, cars.join(", ")].filter(Boolean).join(" : ")],["Moment de la journée", [m.heure_du_jour, m.vitesse_temps].filter(Boolean).join(" ")],
       ["Conditions", m.conditions], ["Consommation", m.conso_carburant], ["Usure des pneus", m.usure_pneus],
       ["Arrêt obligatoire", m.arret_pit_min ? m.arret_pit_min + " arrêt" : ""], ["Carburant au départ", m.carburant_initial_l ? m.carburant_initial_l + " L" : ""],
       ["Ravitaillement", m.ravitaillement], ["Temps au stand", m.temps_pit_s ? "≈ " + m.temps_pit_s + " s" : ""]].filter(x => x[1]);
-    const cars = D.Voitures.filter(v => v.saison_id === season && v.groupe === m.groupe_voiture).map(v => v.voiture);
     const res = G.results(m.course_id), pen = G.pens(m.course_id), vodList = G.vods(m.course_id);
     shots = G.photos(m.course_id);
     const cats = D.Manches_Categories.filter(x => x.course_id === m.course_id);
-    const ids = [...new Set([...cats.map(x => x.categorie_id || ""), ...res.map(r => r.categorie_id || "")])];
+    const ids = [...new Set([...cats.map(x => x.categorie_id || ""), ...res.map(r => r.categorie_id || "")])].sort();
+    const lobs = G.lobbies(m);
     const cards = ids.map(cat => {
       const info = cats.find(x => (x.categorie_id || "") === cat) || {};
       const rows = res.filter(r => (r.categorie_id || "") === cat).sort((a, b) => (a.position || 99) - (b.position || 99) || b.points - a.points);
-      const meta = [info.tours ? info.tours + " tours" : info.duree, info.heure_depart ? "départ " + G.hm(info.heure_depart) : ""].filter(Boolean).join(" · ");
+      const lob = lobs.find(l => l.cat === cat) || {};
+      const meta = [info.tours ? info.tours + " tours" : info.duree, lob.ouverture && "lobby " + G.hm(lob.ouverture), (lob.depart || info.heure_depart) && "départ " + G.hm(lob.depart || info.heure_depart)].filter(Boolean).join(" · ");
       const pl = pen.filter(x => rows.some(r => r.pilote_id === x.pilote_id));
-      return `<div class="card"><h3>${cat ? "Division " + cat.slice(1) : "Résultats"} <small>${esc(meta)}</small></h3>
+      return `<div class="card"><h3>${cat ? `Division ${cat.slice(1)} (${cat})` : "Résultats"} <small>${esc(meta)}</small></h3>
         ${rows.length ? `<table class="mini">${rows.map((r, i) => `<tr><td>${r.position || i + 1}</td><td><a class="plink" href="pilotes.html#${esc(r.pilote_id)}">${esc(G.name(r.pilote_id))}</a>${G.yes(r.meilleur_tour) ? '<span class="fl">MT</span>' : ""}</td><td>${r.points + (r.points_bonus || 0)}</td></tr>`).join("")}</table>`
           : `<p class="muted">${G.isPast(m) ? "Aucun résultat saisi." : "Résultats après la course."}</p>`}
         ${pl.map(x => `<div class="pen">⚑ ${esc(G.name(x.pilote_id))} : ${esc(x.type === "Points" ? x.points + " pts" : x.type === "Temps" ? "+" + x.secondes + " s" : "avertissement")}</div>`).join("")}</div>`;
@@ -126,11 +141,10 @@
         <div class="muted">${esc(G.fmtLong.format(G.asDate(m.date)))}</div></div>
       ${src ? `<div class="dr-trace"><img src="${src}" alt="Tracé de ${esc(c.nom)}"></div>` : ""}
       ${stats.length ? `<div class="stats">${stats.map(s => `<div><b>${esc(String(s[1]).replace(".", ","))}</b><span>${s[0]}</span></div>`).join("")}</div>` : ""}
-      ${kv.length ? `<dl class="kv">${kv.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
+      ${kv.length ? `<dl class="kv">${kv.map(([k, v]) => `<div${v.length > 40 ? ' class="wide"' : ""}><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
       ${m.reglages_caches ? `<p class="secret">Réglages de course dévoilés ${m.reglages_reveles_le ? "le " + esc(G.fmtLong.format(G.asDate(m.reglages_reveles_le))) : "quelques jours avant la manche"}.</p>` : ""}
       ${shots.length ? `<div class="shots"><h3>Captures <small>${shots.length}</small></h3><div class="shot-grid">${shots.map((p, i) => `<button type="button" class="shot" data-shot="${i}" aria-label="Agrandir la capture ${i + 1}${p.legende ? " : " + esc(p.legende) : ""}"><img src="${esc(G.photoSrc(p, 480))}" alt="" loading="lazy"></button>`).join("")}</div></div>` : ""}
       ${vodList.length ? `<div class="vods"><h3>Revoir la course</h3>${vodList.map(v => `<a class="vod ${v.plateforme.toLowerCase()}" href="${esc(v.url)}" target="_blank" rel="noopener"><span>${esc(v.plateforme)}</span>${esc(v.titre || (v.categorie_id ? "Division " + v.categorie_id.slice(1) : "Rediffusion"))}</a>`).join("")}</div>` : ""}
-      ${cars.length ? `<p class="muted">Voitures permises : ${cars.map(esc).join(", ")}</p>` : ""}
       ${m.note_publique ? `<p class="muted">${esc(m.note_publique)}</p>` : ""}
       <div class="cards">${cards}</div>`;
     $("drawer").hidden = false;
@@ -176,7 +190,7 @@
       const tag = r.tag ? `<span class="div-tag ${r.tag}">${r.tag === "R" ? "Rés." : r.tag}</span>` : "<span></span>";
       const t = G.teamOf(r.id, season);
       const sub = team ? D.Equipe_Membres.filter(x => x.equipe_id === r.id && x.pilote_id).map(x => G.name(x.pilote_id)).join(" · ")
-        : G.isCurrent(season) ? (r.tag ? "Division " + r.tag.slice(1) : "") : [t && t.nom, r.note].filter(Boolean).join(" · ");
+        : G.isCurrent(season) ? "" :[t && t.nom, r.note].filter(Boolean).join(" · ");
       const n = team ? `<span class="n">${esc(nm)}</span>` : `<a class="n plink" href="pilotes.html#${esc(r.id)}">${esc(nm)}</a>`;
       return `<li class="${i === 0 ? "lead" : ""}"><span class="p">${esc(r.rank)}</span>${n}${tag}<span class="t">${esc(sub)}</span><span class="pts">${esc(G.num(+r.pts))}</span></li>`;
     }).join("");

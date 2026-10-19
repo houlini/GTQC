@@ -62,7 +62,14 @@ window.GT = (() => {
   const traceSrc = m => circ(m).gt7_layout_id ? `${IMG}circuits/traces/${circ(m).gt7_layout_id.replace(/-reverse$/, "")}.png` : "";
   const startOf = (m, cat = "D2") => (D.Manches_Categories.find(x => x.course_id === m.course_id && x.categorie_id === cat) || {}).heure_depart || m.heure || "19:00";
   const label = m => m.type === "Tryout" ? "Tryouts" : m.type === "Spéciale" ? "Course ouverte au public" : m.type === "Finale" ? `Manche ${m.manche} · Finale` : `Manche ${m.manche}`;
-  const hm = h => String(h).replace(":", " h ");
+  const hm = h => String(h).replace(/^~\s*/, "≈ ").replace(":", " h ");
+  /** Lobbys d'une manche, D1 puis D2 : départ (Manches_Categories, sinon Horaire), ouverture du lobby, tours. */
+  const lobbies = m => ["D1", "D2"].map(cat => {
+    const info = D.Manches_Categories.find(x => x.course_id === m.course_id && x.categorie_id === cat);
+    if (!info) return null;
+    const h = etape => ((D.Horaire || []).find(x => x.categorie_id === cat && x.etape === etape) || {}).heure;
+    return { cat, depart: info.heure_depart || h("Course"), ouverture: h("Ouverture du lobby"), tours: info.tours };
+  }).filter(l => l && l.depart);
   /** Captures d'une manche (onglet Photos, envoyées depuis l'admin, fichiers dans Drive). w = largeur voulue. */
   const photos = cid => D.Photos.filter(p => p.course_id === cid && p.url && !no(p.publier)).sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
   const photoSrc = (p, w) => /^https:\/\/lh3\./.test(p.url) ? `${p.url}=w${w}` : p.url;
@@ -154,7 +161,7 @@ window.GT = (() => {
       const inner = logo ? `<img src="${IMG + esc(logo)}" alt="${esc(s.nom)}">` : `<span class="txt">${esc(s.nom)}</span>`;
       return s.site_web ? `<a href="${esc(s.site_web)}" target="_blank" rel="noopener" title="${esc(s.nom)}">${inner}</a>` : `<span title="${esc(s.nom)}">${inner}</span>`;
     }).join("");
-    if ($("horaire")) $("horaire").innerHTML = ["D2", "D1"].map(cat => `<div class="sched-h">Lobby ${cat.slice(1)}</div><dl class="sched">${(D.Horaire || []).filter(h => h.categorie_id === cat).sort((a, b) => a.ordre - b.ordre).map(h => `<dt>${esc(String(h.heure))}</dt><dd>${esc(h.etape)}${h.duree ? " (" + esc(h.duree) + ")" : ""}</dd>`).join("")}</dl>`).join("");
+    if ($("horaire")) $("horaire").innerHTML = ["D1", "D2"].map(cat => `<div class="sched-h">Division ${cat.slice(1)} (${cat})</div><dl class="sched">${(D.Horaire || []).filter(h => h.categorie_id === cat).sort((a, b) => a.ordre - b.ordre).map(h => `<dt>${esc(hm(h.heure))}</dt><dd>${esc(h.etape)}${h.duree ? " (" + esc(h.duree) + ")" : ""}</dd>`).join("")}</dl>`).join("");
     if ($("links")) $("links").innerHTML = [["Facebook", cfg.facebook_url], ["Instagram", cfg.instagram_url], ["YouTube", cfg.youtube_url]].filter(l => l[1]).map(([n, u]) => `<li><a href="${esc(u)}" target="_blank" rel="noopener">${n}</a></li>`).join("");
     if ($("mail")) $("mail").textContent = cfg.courriel_contact || "";
     const bar = $("topbar"); const onScroll = () => bar.classList.toggle("solid", scrollY > 40);
@@ -203,5 +210,5 @@ window.GT = (() => {
 
   return { D, IMG, yes, no, cfg, circuits, gt7, pilots, teams, $, esc, name, asDate, fmtLong, fmtShort, fmtMon, COLORS, num, flag,
     seasons, current, isCurrent, rounds, counted, results, pens, done, pilotRounds, isPast, nextRound, circ, layout, traceSrc,
-    startOf, label, hm, roundPts, totals, ranked, official, standings, positions, teamOf, pilotStats, seasonsOf, chrome, vods, photos, photoSrc, API, twitchStatus };
+    startOf, label, hm, lobbies, roundPts, totals, ranked, official, standings, positions, teamOf, pilotStats, seasonsOf, chrome, vods, photos, photoSrc, API, twitchStatus };
 })();
