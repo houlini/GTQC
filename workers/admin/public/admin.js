@@ -132,12 +132,16 @@
     const m = D.Manches.find(x => x.course_id === ui.res) || prochaine();
     if (!m) return "<p>Aucune manche.</p>";
     ui.res = m.course_id; ui.lobby = ui.lobby || "D1";
+    // Un brouillon par manche et lobby : changer de lobby ou de manche ne perd rien. Tant qu'il n'est pas modifié,
+    // il suit le classeur (données rechargées après chaque enregistrement).
     const cle = m.course_id + ui.lobby;
-    if (!ui.brouillon || ui.brouillon.cle !== cle) {
+    ui.brouillons = ui.brouillons || {};
+    if (!ui.brouillons[cle] || !ui.brouillons[cle].modifie) {
       const ex = resultatsDe(m.course_id).filter(r => (r.categorie_id || "") === ui.lobby).sort((a, b) => a.position - b.position);
-      ui.brouillon = { cle, lignes: ex.map(r => ({ pilote_id: r.pilote_id, statut: r.statut || "Classé", meilleur_tour: yes(r.meilleur_tour), note: r.note || "" })) };
+      ui.brouillons[cle] = { cle, lignes: ex.map(r => ({ pilote_id: r.pilote_id, statut: r.statut || "Classé", meilleur_tour: yes(r.meilleur_tour), note: r.note || "" })) };
     }
-    const b = ui.brouillon;
+    const b = ui.brouillon = ui.brouillons[cle];
+    const enCours = c => ui.brouillons[m.course_id + c] && ui.brouillons[m.course_id + c].modifie;
     // Pilotes proposés : le lobby, les remplaçants prévus pour cette manche, puis les réserves
     const rempl = D.Remplacements.filter(r => r.course_id === m.course_id && r.remplacant_id && (!r.categorie_id || r.categorie_id === ui.lobby)).map(r => r.remplacant_id);
     const duLobby = titulaires().filter(e => lobbyDe(e.pilote_id) === ui.lobby).map(e => e.pilote_id);
@@ -146,7 +150,7 @@
     const bonus = Number(cfg().points_meilleur_tour) || 0;
     const pens = ui.pens && ui.pens.cle === m.course_id ? ui.pens : (ui.pens = { cle: m.course_id, lignes: D.Penalites.filter(p => p.course_id === m.course_id).map(p => ({ ...p })) });
     return `<div class="adm-head"><h1>Résultats</h1><div class="adm-actions"><select id="resManche">${optManches(m.course_id)}</select>
-        <div class="seg" id="resLobby">${["D1", "D2"].map(c => `<button type="button" data-lobby="${c}" aria-pressed="${ui.lobby === c}">Lobby ${c.slice(1)}</button>`).join("")}</div></div></div>
+        <div class="seg" id="resLobby">${["D1", "D2"].map(c => `<button type="button" data-lobby="${c}" aria-pressed="${ui.lobby === c}">Lobby ${c.slice(1)}${enCours(c) ? " · non enregistré" : ""}</button>`).join("")}</div></div></div>
       <div class="adm-cols">
         <div class="adm-card"><h2>Lire une capture du jeu</h2>
           <p class="muted">Capture ou photo de l'écran des résultats de GT7 (plusieurs si le tableau tient sur 2 pages). Positions, DNF et meilleur tour sont remplis dans le tableau ; tu vérifies avant d'enregistrer.</p>
@@ -171,7 +175,7 @@
           }).join("") || `<tr><td colspan="7" class="muted">Aucun résultat : colle le classement ou ajoute les pilotes.</td></tr>`}</tbody></table>
           <div class="adm-actions"><button type="button" class="btn ghost" id="ajLigne">+ Pilote</button><button type="button" class="btn ghost" id="ajLobby">Ajouter tout le lobby</button></div>
           <label class="check"><input type="checkbox" id="terminer" ${m.statut === "Terminée" ? "checked" : ""}> Marquer la manche comme terminée</label>
-          <div class="adm-actions"><button type="button" class="btn" id="saveRes">Enregistrer les résultats</button><span class="muted">Points calculés avec le barème du lobby${bonus ? ` (+${bonus} meilleur tour)` : ""}.</span></div>
+          <div class="adm-actions"><button type="button" class="btn" id="saveRes">Enregistrer les résultats</button>${b.modifie ? `<span class="warn-txt">Modifications non enregistrées</span><button type="button" class="lien" id="annulerRes">Annuler les modifications</button>` : ""}<span class="muted">Points calculés avec le barème du lobby${bonus ? ` (+${bonus} meilleur tour)` : ""}.</span></div>
           ${blocVerif(m.course_id, ui.lobby)}
         </div>
       </div>
@@ -207,10 +211,20 @@
     // Meilleur tour : le plus petit temps parmi les pilotes classés (format m:ss.xxx)
     const sec = t => { const m = /^(?:(\d+):)?(\d{1,2})[.,](\d{1,3})$/.exec(String(t || "").trim()); return m ? (Number(m[1] || 0) * 60 + Number(m[2]) + Number("0." + m[3])) : Infinity; };
     const mt = lignes.filter(l => l.statut === "Classé").reduce((best, l) => sec(l.meilleur_tour) < sec(best && best.meilleur_tour) ? l : best, null);
-    ui.brouillon.lignes = lignes.map(l => ({ pilote_id: trouverPilote(l.nom), lu: l.nom, statut: l.statut, meilleur_tour: !!mt && sec(mt.meilleur_tour) < Infinity && l === mt, note: "" }));
+    // La position enregistrée est le rang dans le tableau : une position illisible garde sa ligne (à compléter),
+    // sinon tous les pilotes suivants seraient remontés d'une place
+    const derniere = lignes.length ? lignes[lignes.length - 1].position : 0, trous = [];
+    const lu = new Map(lignes.map(l => [l.position, l]));
+    ui.brouillon.lignes = [];
+    for (let pos = 1; pos <= derniere; pos++) {
+      const l = lu.get(pos);
+      if (!l) { trous.push(pos); ui.brouillon.lignes.push({ pilote_id: "", lu: `position ${pos} illisible`, illisible: true, statut: "Classé", meilleur_tour: false, note: "" }); continue; }
+      ui.brouillon.lignes.push({ pilote_id: trouverPilote(l.nom), lu: l.nom, statut: l.statut, meilleur_tour: !!mt && sec(mt.meilleur_tour) < Infinity && l === mt, note: "" });
+    }
+    ui.brouillon.modifie = true;
     render();
-    const manquants = ui.brouillon.lignes.filter(l => !l.pilote_id).map(l => l.lu);
-    toast(`${lignes.length} pilotes lus${manquants.length ? `, ${manquants.length} à associer (choisis le pilote : il sera retenu pour les prochaines fois)` : ""}. Vérifie avant d'enregistrer.`, manquants.length ? "warn" : "ok");
+    const manquants = ui.brouillon.lignes.filter(l => !l.pilote_id && !l.illisible).length;
+    toast(`${lignes.length} pilotes lus${trous.length ? `, position${trous.length > 1 ? "s" : ""} ${trous.join(", ")} illisible${trous.length > 1 ? "s" : ""} (choisis le pilote d'après la capture)` : ""}${manquants ? `, ${manquants} à associer (choisis le pilote : il sera retenu pour les prochaines fois)` : ""}. Vérifie avant d'enregistrer.`, manquants || trous.length ? "warn" : "ok");
   }
   async function lireCaptures(fichiers) {
     const liste = [...fichiers].filter(f => /^image\/(jpeg|png|webp)$/.test(f.type));
@@ -283,8 +297,11 @@
       const fin = nom.match(/\s+(DNF|DNS|DSQ|MT)$/i);
       if (fin) { if (/MT/i.test(fin[1])) mt = true; else statut = fin[1].toUpperCase(); nom = nom.slice(0, fin.index); }
       nom = nom.replace(/^\d{1,2}(e|er)?[.)]?\s+/i, "");
+      if (!nom) return;
+      // Un pseudo inconnu garde sa ligne (à associer) : le retirer remonterait tous les pilotes suivants
       const id = trouverPilote(nom);
-      if (id) lignes.push({ pilote_id: id, statut, meilleur_tour: mt, note: "" }); else if (nom) inconnus.push(nom);
+      lignes.push({ pilote_id: id, lu: nom, statut, meilleur_tour: mt, note: "" });
+      if (!id) inconnus.push(nom);
     });
     return { lignes, inconnus };
   }
@@ -512,7 +529,7 @@
   main.addEventListener("change", e => {
     const t = e.target;
     if (t.id === "saison") { saison = t.value; ui.prop = null; ui.manche = null; return render(); }
-    if (t.id === "resManche") { ui.res = t.value; ui.brouillon = null; return render(); }
+    if (t.id === "resManche") { ui.res = t.value; return render(); }
     if (t.id === "absManche") { ui.abs = t.value; ui.absBrouillon = null; return render(); }
     if (t.id === "vodManche") { ui.vod = t.value; ui.vodB = null; return render(); }
     if (t.id === "phManche") { ui.ph = t.value; ui.phB = null; return render(); }
@@ -530,6 +547,7 @@
       const l = ui.brouillon.lignes[+ligne.dataset.i];
       if (t.dataset.k === "meilleur_tour") ui.brouillon.lignes.forEach(x => { x.meilleur_tour = x === l; });
       else l[t.dataset.k] = t.value;
+      ui.brouillon.modifie = true;
       return render();
     }
     const pl = t.closest("tr[data-p]");
@@ -552,7 +570,7 @@
   main.addEventListener("input", e => {
     if (e.target.id === "q") { ui.q = e.target.value; ui.focusQ = true; render(); }
     const ligne = e.target.closest("tr[data-i]");
-    if (ligne && e.target.dataset.k === "note") ui.brouillon.lignes[+ligne.dataset.i].note = e.target.value;
+    if (ligne && e.target.dataset.k === "note") { ui.brouillon.lignes[+ligne.dataset.i].note = e.target.value; ui.brouillon.modifie = true; }
   });
   main.addEventListener("click", async e => {
     const t = e.target.closest("button, [data-edit]");
@@ -563,31 +581,44 @@
     if ("cancel" in d) { ui.manche = null; return render(); }
     if (t.id === "lireColle") {
       const r = lireClassement($("colle").value);
-      ui.brouillon.lignes = r.lignes;
+      ui.brouillon.lignes = r.lignes; ui.brouillon.modifie = true;
       render();
-      if (r.inconnus.length) { $("inconnus").hidden = false; $("inconnus").textContent = "Pseudos non reconnus (à ajouter à la main ou dans Pilotes) : " + r.inconnus.join(", "); }
+      if (r.inconnus.length) { $("inconnus").hidden = false; $("inconnus").textContent = `Pseudos non reconnus, gardés à leur position : ${r.inconnus.join(", ")}. Choisis le pilote sur chaque ligne surlignée (il sera retenu pour les prochaines fois), ou crée-le dans Pilotes.`; }
       return;
     }
-    if (t.id === "ajLigne") { ui.brouillon.lignes.push({ pilote_id: "", statut: "Classé", meilleur_tour: false, note: "" }); return render(); }
+    if (t.id === "ajLigne") { ui.brouillon.lignes.push({ pilote_id: "", statut: "Classé", meilleur_tour: false, note: "" }); ui.brouillon.modifie = true; return render(); }
     if (t.id === "ajLobby") {
       const deja = new Set(ui.brouillon.lignes.map(l => l.pilote_id));
       titulaires().filter(x => lobbyDe(x.pilote_id) === ui.lobby && !deja.has(x.pilote_id)).forEach(x => ui.brouillon.lignes.push({ pilote_id: x.pilote_id, statut: "Classé", meilleur_tour: false, note: "" }));
+      ui.brouillon.modifie = true;
       return render();
     }
-    if (d.lobby) { ui.lobby = d.lobby; ui.brouillon = null; return render(); }
+    if (d.lobby) { ui.lobby = d.lobby; return render(); }
     const L = ui.brouillon && ui.brouillon.lignes;
-    if (d.up) { const i = +d.up; if (i > 0) [L[i - 1], L[i]] = [L[i], L[i - 1]]; return render(); }
-    if (d.down) { const i = +d.down; if (i < L.length - 1) [L[i + 1], L[i]] = [L[i], L[i + 1]]; return render(); }
-    if (d.del) { L.splice(+d.del, 1); return render(); }
+    if (d.up) { const i = +d.up; if (i > 0) [L[i - 1], L[i]] = [L[i], L[i - 1]]; ui.brouillon.modifie = true; return render(); }
+    if (d.down) { const i = +d.down; if (i < L.length - 1) [L[i + 1], L[i]] = [L[i], L[i + 1]]; ui.brouillon.modifie = true; return render(); }
+    if (d.del) { L.splice(+d.del, 1); ui.brouillon.modifie = true; return render(); }
+    if (t.id === "annulerRes") {
+      if (!confirm("Annuler les modifications de ce lobby et revenir aux résultats enregistrés ?")) return;
+      delete ui.brouillons[ui.brouillon.cle];
+      if (ui.capturesLues && ui.capturesLues.cle === ui.brouillon.cle) ui.capturesLues = null;
+      return render();
+    }
     if (t.id === "saveRes") {
       if (L.some(l => !l.pilote_id)) return toast("Chaque ligne doit avoir un pilote.", "err");
       if (new Set(L.map(l => l.pilote_id)).size !== L.length) return toast("Un pilote apparaît deux fois.", "err");
       // Noms lus sur la capture et associés à la main : retenus dans _PSN pour les prochaines lectures
-      const nouveaux = L.filter(l => l.lu && l.pilote_id && trouverPilote(l.lu) !== l.pilote_id);
+      const nouveaux = L.filter(l => l.lu && !l.illisible && l.pilote_id && trouverPilote(l.lu) !== l.pilote_id);
       if (nouveaux.length) await envoyer("psn", { lignes: nouveaux.map(l => ({ psn: l.lu, pilote_id: l.pilote_id })) }, `${nouveaux.length} PSN retenu(s)`);
       const cid = ui.res, cat = ui.lobby;
       const r = await envoyer("resultats", { course_id: cid, categorie_id: cat, terminer: $("terminer").checked, lignes: L.map((l, i) => ({ pilote_id: l.pilote_id, statut: l.statut, meilleur_tour: l.meilleur_tour, note: l.note, position: i + 1 })) }, `Résultats ${cid} ${cat}`);
-      if (r.ok && !r.demo && ui.capturesLues) { await garderCaptures(cid, cat); await charger(); render(); }
+      if (r.ok && !r.demo) {
+        const brouillon = ui.brouillons[cid + cat];
+        if (brouillon) brouillon.modifie = false;
+        // envoyer() a déjà rechargé le classeur ; on recharge encore seulement si des captures ont été gardées
+        if (ui.capturesLues) { await garderCaptures(cid, cat); await charger(); }
+        render();
+      }
       return;
     }
     if (d.verif) return voirCapture(d.verif, t);
@@ -681,6 +712,8 @@
   if (VUES[location.hash.slice(1)]) tab = location.hash.slice(1);
   addEventListener("hashchange", () => { if (VUES[location.hash.slice(1)]) { tab = location.hash.slice(1); render(); } });
   charger().then(ok => { if (ok) render(); });
+  // Résultats saisis mais pas enregistrés : le navigateur demande confirmation avant de quitter ou recharger
+  addEventListener("beforeunload", e => { if (Object.values(ui.brouillons || {}).some(b => b.modifie)) { e.preventDefault(); e.returnValue = ""; } });
   // Tests en mode démo : lecture simulée d'une capture
   if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.GTQCAdmin = { appliquerLecture, trouverPilote };
 })();

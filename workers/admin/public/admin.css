@@ -95,3 +95,4 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .adm-cols.reserves .adm-table select[data-promo] { min-width: 0; width: 100%; }
 .adm-cols.reserves .court { width: 100%; }
 @media (max-width: 1000px) { .adm-cols.reserves { grid-template-columns: 1fr; } }
+.warn-txt { color: var(--warn); font-weight: 600; }
