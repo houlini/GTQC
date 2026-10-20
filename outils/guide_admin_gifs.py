@@ -1,4 +1,4 @@
-"""Génère les GIF du guide de l'admin (un par onglet) dans docs/guide-admin/.
+"""Génère les GIF de l'onglet Guide de l'admin (un par onglet) dans workers/admin/public/guide/.
 
 L'admin tourne en mode démo local (données de maquette/data.js, rien n'est enregistré).
 Un script Playwright fait les manipulations, ajoute une légende et un repère de clic, puis Pillow assemble les GIF.
@@ -19,7 +19,7 @@ from PIL import Image
 from playwright.sync_api import sync_playwright
 
 RACINE = Path(__file__).resolve().parent.parent
-SORTIE = RACINE / "docs" / "guide-admin"
+SORTIE = RACINE / "workers" / "admin" / "public" / "guide"
 LARGEUR, HAUTEUR, LARGEUR_GIF = 1280, 720, 1280
 
 # Légende en bas, repère de clic, bannière démo cachée, messages « Mode démo » réécrits comme en ligne

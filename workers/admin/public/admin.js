@@ -551,8 +551,28 @@
       ${D._Journal.map(j => `<tr><td class="nowrap">${esc(j.date)}</td><td>${esc(j.courriel)}</td><td>${esc(j.action)}</td><td>${esc(j.details)}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">${demo ? "Pas de journal en mode démo." : "Rien pour l'instant."}</td></tr>`}</tbody></table>`;
   }
 
+  /* ---------- Guide : une animation par onglet (refaites par outils/guide_admin_gifs.py) ---------- */
+  const GUIDE = [
+    ["manches", "Manches", "Créer et modifier le calendrier. « + Nouvelle manche » reprend la dernière manche, 2 semaines plus tard : il reste à choisir le circuit. Les réglages restent cachés sur le site jusqu'à 7 jours avant la course (mode « Auto »)."],
+    ["resultats", "Résultats", "Choisis la manche et le lobby, puis glisse la capture de GT7 ou colle le classement (un pilote par ligne, MT, DNF, DNS, DSQ). Vérifie, corrige l'ordre, enregistre. Les pénalités se saisissent en bas de l'onglet."],
+    ["grille", "Grille", "Proposition des montées et descentes d'après les 2 dernières manches (au plus 3 échanges, souvent aucun). Change ce que tu veux, indique la manche de départ, puis publie."],
+    ["reserves", "Réserves", "À gauche : ordre d'appel des réserves et promotions. À droite : coche les absents de la manche, assigne les réserves dans l'ordre, enregistre."],
+    ["pilotes", "Pilotes", "Liste publique : pseudos et PSN seulement, jamais de nom réel ni de courriel. « Modifier » ouvre la fiche (PSN, Twitch, rôle et lobby de la saison)."],
+    ["vods", "VOD", "« + Lien » par rediffusion : lobby, titre et adresse YouTube ou Twitch (https://…)."],
+    ["photos", "Captures", "Images de la manche affichées sur le site. Choisis le lobby et la source, glisse les images, ajoute une légende au besoin, enregistre."],
+    ["inscriptions", "Inscriptions", "Demandes du formulaire « Rejoindre ». Fais avancer le statut, ajoute une note interne, ou crée le pilote (réserve ou titulaire) : seul le pseudo passe dans la fiche publique. Demande fictive dans l'animation."],
+    ["journal", "Journal", "Lecture seule : qui a enregistré quoi, et quand. Entrées fictives dans l'animation."],
+  ];
+  function vueGuide() {
+    return `<div class="adm-head"><h1>Guide</h1></div>
+      <p class="muted">Une animation par onglet. Rien n'est enregistré tant que tu n'as pas cliqué sur le bouton Enregistrer de la section ; un message en bas de l'écran confirme ou explique l'échec.</p>
+      <p class="guide-som">${GUIDE.map(([id, titre]) => `<button type="button" class="lien" data-guide="${id}">${titre}</button>`).join("")}</p>
+      ${GUIDE.map(([id, titre, texte]) => `<section class="adm-card guide" id="g-${id}"><div class="adm-head"><h2>${titre}</h2><button type="button" class="btn ghost" data-aller="${id}">Ouvrir l'onglet</button></div>
+        <p>${esc(texte)}</p><img src="guide/${id}.gif" alt="Animation : onglet ${titre}" loading="lazy" width="1280" height="720"></section>`).join("")}`;
+  }
+
   const choixSaison = () => `<select id="saison">${options(D.Saisons.slice().sort((a, b) => b.saison_id.localeCompare(a.saison_id)).map(s => [s.saison_id, s.nom || s.saison_id]), saison)}</select>`;
-  const VUES = { manches: vueManches, resultats: vueResultats, grille: vueGrille, reserves: vueReserves, pilotes: vuePilotes, vods: vueVods, photos: vuePhotos, inscriptions: vueInscriptions, journal: vueJournal };
+  const VUES = { manches: vueManches, resultats: vueResultats, grille: vueGrille, reserves: vueReserves, pilotes: vuePilotes, vods: vueVods, photos: vuePhotos, inscriptions: vueInscriptions, journal: vueJournal, guide: vueGuide };
 
   function render() {
     document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === tab ? "page" : "false"));
@@ -615,6 +635,8 @@
     const t = e.target.closest("button, [data-edit]");
     if (!t) return;
     const d = t.dataset;
+    if (d.guide) return $("g-" + d.guide).scrollIntoView({ behavior: "smooth" });
+    if (d.aller) { tab = d.aller; history.replaceState(null, "", "#" + tab); scrollTo(0, 0); return render(); }
     if ("new" in d) { ui.manche = "nouvelle"; return render(); }
     if (d.edit) { ui.manche = d.edit; render(); return $("fManche").scrollIntoView({ behavior: "smooth" }); }
     if ("cancel" in d) { ui.manche = null; return render(); }
