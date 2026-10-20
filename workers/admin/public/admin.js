@@ -7,6 +7,7 @@
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const yes = v => v === true || String(v).toUpperCase() === "TRUE";
   const no = v => v === false || String(v).toUpperCase() === "FALSE";
+  const slug = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const REGLAGES = [["heure_du_jour", "Moment de la journée"], ["vitesse_temps", "Vitesse du temps"], ["conditions", "Conditions"],
     ["arret_pit_min", "Arrêts obligatoires"], ["conso_carburant", "Consommation"], ["usure_pneus", "Usure des pneus"],
@@ -37,19 +38,45 @@
     saison = saison || cfg().saison_courante || "S02";
     return true;
   }
-  async function envoyer(action, corps, message) {
+  // Codes renvoyés par le Worker ou Apps Script → phrase pour l'admin
+  const ERREURS = {
+    occupe: "un autre enregistrement est en cours. Réessaie dans quelques secondes.",
+    script: "le classeur Google ne répond pas. Réessaie dans un moment.",
+    config: "l'admin est mal configuré (adresse ou secret du script manquant dans le Worker).",
+    acces: "ta session a expiré. Recharge la page pour te reconnecter.",
+    admin: "ton courriel n'est pas dans la liste des admins (onglet _Admins).",
+    champs: "il manque des informations.",
+    date: "la date est invalide.",
+    pseudo: "le pseudo est vide.",
+    existe: "un pilote avec ce pseudo existe déjà. Utilise « Modifier » sur sa ligne.",
+    statut: "statut inconnu.",
+    taille: "le fichier est trop lourd.",
+    format: "format d'image non accepté (JPEG, PNG ou WebP).",
+    introuvable: "élément introuvable (déjà supprimé ?).",
+  };
+  let occupe = false;
+  /** Enregistre une action. recharger: false pour enchaîner plusieurs envois et recharger une seule fois à la fin. */
+  async function envoyer(action, corps, message, { recharger = true } = {}) {
     if (demo) { toast("Mode démo : « " + message + " » non enregistré.", "warn"); return { ok: true, demo: true }; }
+    if (occupe && recharger) { toast("Enregistrement en cours, attends la fin avant de recommencer.", "warn"); return { ok: false, occupe: true }; }
+    occupe = true;
+    main.classList.add("occupe");
+    main.querySelectorAll("button.btn").forEach(b => { b.disabled = true; });
     try {
       const rep = await fetch("/api/" + action, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
-      const r = await rep.json();
-      if (!r.ok) throw new Error(r.detail || r.erreur || "erreur");
-      toast(message + " : enregistré.", "ok");
-      await charger(); render();
+      // Session Access expirée : la réponse est une page de connexion, pas du JSON
+      const r = await rep.json().catch(() => ({ ok: false, erreur: "acces" }));
+      if (!r.ok) throw new Error(ERREURS[r.erreur] || r.detail || r.erreur || "erreur inconnue");
+      if (recharger) { toast(message + " : enregistré.", "ok"); await charger(); render(); }
       return r;
-    } catch (err) { toast("Échec : " + err.message, "err"); return { ok: false }; }
+    } catch (err) {
+      toast(message + " : échec, " + err.message, "err");
+      main.querySelectorAll("button.btn").forEach(b => { b.disabled = false; });
+      return { ok: false };
+    } finally { occupe = false; main.classList.remove("occupe"); }
   }
   let minuteur;
-  function toast(txt, cls) { const t = $("toast"); t.textContent = txt; t.className = "adm-toast " + (cls || ""); t.hidden = false; clearTimeout(minuteur); minuteur = setTimeout(() => { t.hidden = true; }, 5000); }
+  function toast(txt, cls) { const t = $("toast"); t.textContent = txt; t.className = "adm-toast " + (cls || ""); t.hidden = false; clearTimeout(minuteur); minuteur = setTimeout(() => { t.hidden = true; }, cls === "err" ? 12000 : 5000); }
 
   /* ---------- Données dérivées ---------- */
   const cfg = () => Object.fromEntries((D.Config || []).map(r => [r.cle, r.valeur]));
@@ -63,11 +90,20 @@
   const engagements = () => D.Engagements.filter(e => e.saison_id === saison);
   const titulaires = () => engagements().filter(e => e.role === "Titulaire");
   const reserves = () => engagements().filter(e => e.role === "Réserve").sort((a, b) => (Number(a.ordre_reserve) || 99) - (Number(b.ordre_reserve) || 99) || pseudo(a.pilote_id).localeCompare(pseudo(b.pilote_id), "fr"));
-  /** Lobby courant : dernière grille publiée, sinon l'engagement. */
-  const lobbyDe = id => {
-    const g = D.Grilles.filter(x => x.saison_id === saison && x.pilote_id === id).sort((a, b) => b.a_partir_de - a.a_partir_de)[0];
-    return g ? g.categorie_id : (engagements().find(e => e.pilote_id === id) || {}).categorie_id || "";
+  /** Lobby d'un pilote. Sans « num » : le plus récent (dernière grille publiée, sinon l'engagement).
+      Avec « num » (numéro de manche) : la grille en vigueur à cette manche. Une grille publiée d'avance
+      (pour une manche plus tard) ne change donc pas le lobby des manches d'avant. */
+  const lobbyDe = (id, num) => {
+    const gs = D.Grilles.filter(x => x.saison_id === saison && x.pilote_id === id).sort((a, b) => b.a_partir_de - a.a_partir_de);
+    const eng = (engagements().find(e => e.pilote_id === id) || {}).categorie_id || "";
+    if (num == null || !gs.length) return gs[0] ? gs[0].categorie_id : eng;
+    const g = gs.find(x => Number(x.a_partir_de) <= Number(num));
+    if (g) return g.categorie_id;
+    // Seulement des grilles plus tard : le lobby d'avant se déduit du mouvement de la première
+    const premiere = gs[gs.length - 1];
+    return premiere.mouvement === "Montée" ? "D2" : premiere.mouvement === "Descente" ? "D1" : premiere.categorie_id;
   };
+  const numDe = cid => (D.Manches.find(x => x.course_id === cid) || {}).manche;
   const bareme = cat => D.Bareme_Points.filter(b => b.categorie_id === cat);
   const ptsPosition = (cat, pos) => Number((bareme(cat).find(b => Number(b.position) === Number(pos)) || {}).points || 0);
   function totaux() {
@@ -122,7 +158,7 @@
       </div>
       ${m && m.reglages_caches ? '<p class="warn">Ces réglages viennent de la copie publique (cachés) : en mode démo, les champs vides ne veulent pas dire que le Sheet est vide.</p>' : ""}
       <h3>Lobbys</h3>
-      <div class="adm-grid">${["D2", "D1"].map(c => `${champ("heure_" + c, `Départ ${c}`, cat(c).heure_depart, "time")}${champ("duree_" + c, `Durée ${c}`, cat(c).duree, "text", 'placeholder="~40 min"')}${champ("tours_" + c, `Tours ${c}`, cat(c).tours, "number")}`).join("")}</div>
+      <div class="adm-grid">${["D1", "D2"].map(c => `${champ("heure_" + c, `Départ ${c}`, cat(c).heure_depart, "time")}${champ("duree_" + c, `Durée ${c}`, cat(c).duree, "text", 'placeholder="~40 min"')}${champ("tours_" + c, `Tours ${c}`, cat(c).tours, "number")}`).join("")}</div>
       ${champ("note_publique", "Note publique", base.note_publique, "text", 'class="wide"')}
       <div class="adm-actions"><button class="btn" type="submit">Enregistrer</button><button class="btn ghost" type="button" data-cancel>Annuler</button></div></form>`;
   }
@@ -144,7 +180,7 @@
     const enCours = c => ui.brouillons[m.course_id + c] && ui.brouillons[m.course_id + c].modifie;
     // Pilotes proposés : le lobby, les remplaçants prévus pour cette manche, puis les réserves
     const rempl = D.Remplacements.filter(r => r.course_id === m.course_id && r.remplacant_id && (!r.categorie_id || r.categorie_id === ui.lobby)).map(r => r.remplacant_id);
-    const duLobby = titulaires().filter(e => lobbyDe(e.pilote_id) === ui.lobby).map(e => e.pilote_id);
+    const duLobby = titulaires().filter(e => lobbyDe(e.pilote_id, m.manche) === ui.lobby).map(e => e.pilote_id);
     const proposes = [...new Set([...duLobby, ...rempl, ...reserves().map(e => e.pilote_id)])];
     const liste = [...proposes.map(id => D.Pilotes.find(p => p.pilote_id === id)).filter(Boolean), ...pilotes().filter(p => !proposes.includes(p.pilote_id))];
     const bonus = Number(cfg().points_meilleur_tour) || 0;
@@ -309,7 +345,7 @@
   /* ---------- Grille des lobbys ---------- */
   function vueGrille() {
     const t = totaux(), tb = ptsBloc(), b2 = bloc();
-    const tit = titulaires().map(e => ({ id: e.pilote_id, pts: Math.round((t[e.pilote_id] || 0) * 10) / 10, bloc: Math.round((tb[e.pilote_id] || 0) * 10) / 10, actuel: lobbyDe(e.pilote_id) }))
+    const tit = titulaires().map(e => ({ id: e.pilote_id, pts: Math.round((t[e.pilote_id] || 0) * 10) / 10, bloc: Math.round((tb[e.pilote_id] || 0) * 10) / 10, actuel: lobbyDe(e.pilote_id, (Number(ui.grilleDe || (comptees().find(m => !resultatsDe(m.course_id).length) || {}).manche) || 99) - 1) }))
       .sort((a, b) => (a.actuel || "D9").localeCompare(b.actuel || "D9") || b.bloc - a.bloc || b.pts - a.pts);
     const rangs = {};
     tit.forEach(r => { rangs[r.actuel] = (rangs[r.actuel] || 0) + 1; r.rang = `${r.actuel || "?"} · ${rangs[r.actuel]}`; });
@@ -328,7 +364,7 @@
         ${tit.map(r => { const n = ui.prop.choix[r.id] || r.actuel; const mv = mouvement(r.actuel, n);
           return `<tr class="${mv ? "move" : ""}"><td>${r.rang}</td><td>${esc(pseudo(r.id))}</td><td class="num">${r.bloc}</td><td class="num">${r.pts}</td><td>${esc(r.actuel || "?")}</td>
             <td><select data-g="${esc(r.id)}">${options([["D1", "Lobby 1"], ["D2", "Lobby 2"]], n)}</select></td><td>${mv ? (mv === "Montée" ? "▲ Montée" : "▼ Descente") : ""}</td></tr>`; }).join("")}</tbody></table>
-        <div class="adm-actions"><button type="button" class="btn" id="saveGrille">Publier la grille</button><span class="muted">Le site affiche aussitôt le nouveau lobby de chaque pilote.</span></div>
+        <div class="adm-actions"><button type="button" class="btn" id="saveGrille">Publier la grille</button><span class="muted">Le site public affiche le nouveau lobby de chaque pilote dans les 5 minutes.</span></div>
       </div>
       ${hist.length ? `<div class="adm-card"><h2>Grilles publiées</h2>${hist.map(h => { const g = D.Grilles.filter(x => x.saison_id === saison && x.a_partir_de === h); const mv = g.filter(x => x.mouvement);
         return `<p><b>Dès la manche ${esc(h)}</b> · ${esc((g[0] || {}).publie_le || "")} · ${mv.length ? mv.map(x => `${esc(pseudo(x.pilote_id))} ${x.mouvement === "Montée" ? "▲" : "▼"}`).join(", ") : "aucun changement"}</p>`; }).join("")}</div>` : ""}`;
@@ -380,7 +416,7 @@
         <div class="adm-card"><h2>Absences et remplaçants</h2>
           ${m ? `<div class="adm-actions"><select id="absManche">${optManches(ui.abs)}</select><button type="button" class="btn ghost" id="autoRes">Assigner les réserves dans l'ordre</button></div>
           ${["D1", "D2"].map(cat => `<h3>Lobby ${cat.slice(1)}</h3><table class="adm-table"><tbody>
-            ${titulaires().filter(e => lobbyDe(e.pilote_id) === cat).map(e => { const x = a[e.pilote_id]; return `<tr class="${x ? "move" : ""}"><td><label class="check"><input type="checkbox" data-absent="${esc(e.pilote_id)}" data-cat="${cat}" ${x ? "checked" : ""}> ${esc(pseudo(e.pilote_id))}</label></td>
+            ${titulaires().filter(e => lobbyDe(e.pilote_id, m.manche) === cat).map(e => { const x = a[e.pilote_id]; return `<tr class="${x ? "move" : ""}"><td><label class="check"><input type="checkbox" data-absent="${esc(e.pilote_id)}" data-cat="${cat}" ${x ? "checked" : ""}> ${esc(pseudo(e.pilote_id))}</label></td>
               <td>${x ? `<select data-rempl="${esc(e.pilote_id)}">${options(rs.filter(r => r.pilote_id === x.remplacant_id || !pris.has(r.pilote_id)).map(r => [r.pilote_id, pseudo(r.pilote_id)]), x.remplacant_id, "À combler")}</select>` : ""}</td></tr>`; }).join("")}</tbody></table>`).join("")}
           <div class="adm-actions"><button type="button" class="btn" id="saveAbs">Enregistrer les absences</button></div>` : "<p>Aucune manche.</p>"}
         </div>
@@ -397,8 +433,11 @@
       ${ui.pilote ? `<form class="adm-card" id="fPilote"><h2>${p.pilote_id ? "Modifier " + esc(p.pseudo) : "Nouveau pilote"}</h2><input type="hidden" name="pilote_id" value="${esc(p.pilote_id || "")}">
         <div class="adm-grid">${champ("pseudo", "Pseudo (Discord)", p.pseudo, "text", "required")}${champ("numero", "Numéro", p.numero, "number")}${champ("region", "Région", p.region)}
           <label>Contrôle<select name="controle">${options([["Volant", "Volant"], ["Manette", "Manette"]], p.controle, "?")}</select></label>${champ("driver_rating", "Driver Rating", p.driver_rating)}
-          ${champ("psn", "PSN (plusieurs : séparer par /)", p.psn)}${champ("twitch", "Chaîne Twitch", p.twitch, "text", 'placeholder="nom ou twitch.tv/nom"')}${champ("avatar", "Avatar (chemin sous assets/img/)", p.avatar)}
+          ${champ("psn", "PSN (plusieurs : séparer par /)", p.psn)}${champ("twitch", "Chaîne Twitch", p.twitch, "text", 'placeholder="nom ou twitch.tv/nom"')}${champ("avatar", "Avatar (fichier ajouté au site par le webmestre)", p.avatar, "text", 'placeholder="vide = casque GTQC"')}
           <label>Actif<select name="actif">${options([["TRUE", "Oui"], ["FALSE", "Non"]], no(p.actif) ? "FALSE" : "TRUE")}</select></label>
+          ${(() => { const e = engagements().find(y => y.pilote_id === p.pilote_id) || {};
+            return `<label>Rôle en ${esc(saison)}<select name="role">${options([["Titulaire", "Titulaire"], ["Réserve", "Réserve"], ["Inactif", "Inactif"]], e.role, "Pas inscrit")}</select></label>
+            <label>Lobby (titulaire)<select name="lobby">${options([["D1", "Lobby 1"], ["D2", "Lobby 2"]], e.role === "Titulaire" ? lobbyDe(p.pilote_id) : "", "Choisir")}</select></label>`; })()}
           <label class="wide">Bio<textarea name="bio" rows="2">${esc(p.bio || "")}</textarea></label></div>
         <div class="adm-actions"><button class="btn" type="submit">Enregistrer</button><button class="btn ghost" type="button" data-pcancel>Annuler</button></div></form>` : ""}
       <table class="adm-table"><thead><tr><th>Pseudo</th><th>PSN</th><th>Lobby</th><th>Contrôle</th><th>DR</th><th>Twitch</th><th>Actif</th><th></th></tr></thead><tbody>
@@ -504,7 +543,7 @@
         <dl class="kv">${[["Courriel", x.courriel], ["PSN", x.psn], ["Région", x.region], ["Contrôle", x.controle], ["Driver Rating", x.driver_rating], ["Twitch", x.twitch], ["Disponibilités", x.disponibilites], ["Expérience", x.experience], ["Message", x.message]].filter(k => k[1]).map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
         <div class="adm-actions"><select data-istatut>${options(STATUTS_INSCR.map(s => [s, s]), x.statut || "Nouvelle")}</select><input data-inote value="${esc(x.note_admin || "")}" placeholder="Note interne">
           <button type="button" class="btn ghost" data-isave>Enregistrer</button>
-          ${existe ? `<span class="muted">Pilote existant : ${esc(existe.pseudo)}</span>` : `<button type="button" class="btn ghost" data-icreer="reserve">Créer comme réserve</button><button type="button" class="btn ghost" data-icreer="pilote">Créer le pilote</button>`}</div></div>`; }).join("") || `<p class="muted">Aucune demande.</p>`}`;
+          ${existe ? `<span class="muted">Pilote existant : ${esc(existe.pseudo)}</span>` : `<button type="button" class="btn ghost" data-icreer="reserve">Créer comme réserve</button><button type="button" class="btn ghost" data-icreer="pilote">Créer comme titulaire</button>`}</div></div>`; }).join("") || `<p class="muted">Aucune demande.</p>`}`;
   }
 
   function vueJournal() {
@@ -589,7 +628,14 @@
     if (t.id === "ajLigne") { ui.brouillon.lignes.push({ pilote_id: "", statut: "Classé", meilleur_tour: false, note: "" }); ui.brouillon.modifie = true; return render(); }
     if (t.id === "ajLobby") {
       const deja = new Set(ui.brouillon.lignes.map(l => l.pilote_id));
-      titulaires().filter(x => lobbyDe(x.pilote_id) === ui.lobby && !deja.has(x.pilote_id)).forEach(x => ui.brouillon.lignes.push({ pilote_id: x.pilote_id, statut: "Classé", meilleur_tour: false, note: "" }));
+      // Titulaires du lobby à cette manche ; un absent est remplacé par le réserviste prévu dans l'onglet Réserves
+      const num = numDe(ui.res);
+      titulaires().filter(x => lobbyDe(x.pilote_id, num) === ui.lobby).forEach(x => {
+        const r = D.Remplacements.find(y => y.course_id === ui.res && y.absent_id === x.pilote_id);
+        if (r && !r.remplacant_id) return; // absent sans remplaçant : pas de ligne
+        const id = r ? r.remplacant_id : x.pilote_id;
+        if (!deja.has(id)) { deja.add(id); ui.brouillon.lignes.push({ pilote_id: id, statut: "Classé", meilleur_tour: false, note: r ? "Remplace " + pseudo(x.pilote_id) : "" }); }
+      });
       ui.brouillon.modifie = true;
       return render();
     }
@@ -609,7 +655,7 @@
       if (new Set(L.map(l => l.pilote_id)).size !== L.length) return toast("Un pilote apparaît deux fois.", "err");
       // Noms lus sur la capture et associés à la main : retenus dans _PSN pour les prochaines lectures
       const nouveaux = L.filter(l => l.lu && !l.illisible && l.pilote_id && trouverPilote(l.lu) !== l.pilote_id);
-      if (nouveaux.length) await envoyer("psn", { lignes: nouveaux.map(l => ({ psn: l.lu, pilote_id: l.pilote_id })) }, `${nouveaux.length} PSN retenu(s)`);
+      if (nouveaux.length) await envoyer("psn", { lignes: nouveaux.map(l => ({ psn: l.lu, pilote_id: l.pilote_id })) }, `${nouveaux.length} nom(s) retenu(s)`, { recharger: false });
       const cid = ui.res, cat = ui.lobby;
       const r = await envoyer("resultats", { course_id: cid, categorie_id: cat, terminer: $("terminer").checked, lignes: L.map((l, i) => ({ pilote_id: l.pilote_id, statut: l.statut, meilleur_tour: l.meilleur_tour, note: l.note, position: i + 1 })) }, `Résultats ${cid} ${cat}`);
       if (r.ok && !r.demo) {
@@ -630,17 +676,23 @@
       const de = Number($("grilleDe").value);
       if (!de) return toast("Indique la manche à partir de laquelle la grille s'applique.", "err");
       const t2 = totaux();
-      const lignes = titulaires().map(x => x.pilote_id).sort((a, b) => (t2[b] || 0) - (t2[a] || 0)).map((id, i) => ({ pilote_id: id, categorie_id: ui.prop.choix[id] || lobbyDe(id), rang: i + 1, mouvement: mouvement(lobbyDe(id), ui.prop.choix[id] || lobbyDe(id)) }));
+      const lignes = titulaires().map(x => x.pilote_id).sort((a, b) => (t2[b] || 0) - (t2[a] || 0)).map((id, i) => ({ pilote_id: id, categorie_id: ui.prop.choix[id] || lobbyDe(id, de - 1), rang: i + 1, mouvement: mouvement(lobbyDe(id, de - 1), ui.prop.choix[id] || lobbyDe(id, de - 1)) }));
       if (!confirm(`Publier la grille dès la manche ${de} ? ${lignes.filter(l => l.mouvement).length} changement(s).`)) return;
       return envoyer("grille", { saison_id: saison, a_partir_de: de, lignes }, `Grille dès M${de}`);
     }
     if (t.id === "ajRes") { const id = $("nouvRes").value; if (!id) return; return envoyer("engagement", { engagement: { saison_id: saison, pilote_id: id, role: "Réserve", categorie_id: "", ordre_reserve: reserves().length + 1 } }, `${pseudo(id)} en réserve`); }
     if (t.id === "saveOrdre") {
       const champs = [...main.querySelectorAll("[data-ordre]")];
-      for (const c of champs) {
-        const e2 = reserves().find(x => x.pilote_id === c.dataset.ordre);
-        if (String(e2.ordre_reserve ?? "") !== c.value) { const r = await envoyer("engagement", { engagement: { saison_id: saison, pilote_id: c.dataset.ordre, ordre_reserve: Number(c.value) || "" } }, "Ordre de " + pseudo(c.dataset.ordre)); if (!r.ok) return; }
+      // Un envoi par réserve modifiée, puis un seul rechargement du classeur
+      const changes = champs.filter(c => String((reserves().find(x => x.pilote_id === c.dataset.ordre) || {}).ordre_reserve ?? "") !== c.value);
+      if (!changes.length) return toast("Aucun changement d'ordre.", "warn");
+      for (const c of changes) {
+        const r = await envoyer("engagement", { engagement: { saison_id: saison, pilote_id: c.dataset.ordre, ordre_reserve: Number(c.value) || "" } }, "Ordre de " + pseudo(c.dataset.ordre), { recharger: false });
+        if (!r.ok) return;
       }
+      if (demo) return;
+      toast(`Ordre des réserves : ${changes.length} changement(s) enregistré(s).`, "ok");
+      await charger(); render();
       return;
     }
     if (t.id === "autoRes") {
@@ -650,7 +702,7 @@
       return render();
     }
     if (t.id === "saveAbs") {
-      const lignes = Object.entries(ui.absBrouillon.lignes).map(([absent_id, x]) => ({ absent_id, remplacant_id: x.remplacant_id, categorie_id: x.categorie_id || lobbyDe(absent_id), note: x.note }));
+      const lignes = Object.entries(ui.absBrouillon.lignes).map(([absent_id, x]) => ({ absent_id, remplacant_id: x.remplacant_id, categorie_id: x.categorie_id || lobbyDe(absent_id, numDe(ui.abs)), note: x.note }));
       return envoyer("remplacements", { course_id: ui.abs, lignes }, `Absences ${ui.abs}`);
     }
     if ("pnew" in d) { ui.pilote = "nouveau"; return render(); }
@@ -674,10 +726,12 @@
       const x = D._Inscriptions.find(i => String(i.id) === carte.dataset.id);
       if ("isave" in d) return envoyer("inscription", { id: x.id, statut: carte.querySelector("[data-istatut]").value, note_admin: carte.querySelector("[data-inote]").value }, "Demande de " + x.pseudo_discord);
       if (d.icreer) {
-        const r = await envoyer("pilote", { pilote: { pseudo: x.pseudo_discord, psn: x.psn || "", controle: x.controle || "", driver_rating: x.driver_rating || "", twitch: x.twitch || "", region: x.region || "", actif: true } }, "Pilote " + x.pseudo_discord);
+        const r = await envoyer("pilote", { pilote: { pseudo: x.pseudo_discord, psn: x.psn || "", controle: x.controle || "", driver_rating: x.driver_rating || "", twitch: x.twitch || "", region: x.region || "", actif: true } }, "Pilote " + x.pseudo_discord, { recharger: false });
         if (!r.ok || r.demo) return;
-        if (d.icreer === "reserve") await envoyer("engagement", { engagement: { saison_id: saison, pilote_id: r.pilote.pilote_id, role: "Réserve", ordre_reserve: reserves().length + 1 } }, x.pseudo_discord + " en réserve");
+        if (d.icreer === "reserve") await envoyer("engagement", { engagement: { saison_id: saison, pilote_id: r.pilote.pilote_id, role: "Réserve", ordre_reserve: reserves().length + 1 } }, x.pseudo_discord + " en réserve", { recharger: false });
         await envoyer("inscription", { id: x.id, statut: d.icreer === "reserve" ? "Réserve" : "Acceptée" }, "Demande de " + x.pseudo_discord);
+        // Titulaire : la fiche s'ouvre pour choisir le rôle et le lobby de la saison
+        if (d.icreer === "pilote") { tab = "pilotes"; ui.pilote = r.pilote.pilote_id; history.replaceState(null, "", "#pilotes"); render(); toast(`${x.pseudo_discord} créé : choisis son rôle et son lobby, puis Enregistrer.`, "ok"); }
       }
     }
   });
@@ -697,13 +751,34 @@
         statut: v.statut, publier: v.publier === "TRUE", points_pilotes: v.points_pilotes === "TRUE", note_publique: v.note_publique, reglages_visibles: v.reglages_visibles };
       REGLAGES.forEach(([k]) => { m[k] = v[k]; });
       if (!m.course_id && manches().some(x => Number(x.manche) === m.manche)) return toast(`La manche ${m.manche} existe déjà.`, "err");
-      const categories = ["D2", "D1"].map(c => ({ categorie_id: c, heure_depart: v["heure_" + c], duree: v["duree_" + c], tours: v["tours_" + c] })).filter(c => c.heure_depart || c.duree || c.tours);
+      const categories = ["D1", "D2"].map(c => ({ categorie_id: c, heure_depart: v["heure_" + c], duree: v["duree_" + c], tours: v["tours_" + c] })).filter(c => c.heure_depart || c.duree || c.tours);
       envoyer("manche", { manche: m, categories }, `Manche ${m.manche}`).then(r => { if (r.ok && !r.demo) { ui.manche = null; render(); } });
     }
     if (f.id === "fPilote") {
-      const p = { ...v, actif: v.actif === "TRUE" };
-      if (!p.pilote_id) delete p.pilote_id;
-      envoyer("pilote", { pilote: p }, "Pilote " + p.pseudo).then(r => { if (r.ok && !r.demo) { ui.pilote = null; render(); } });
+      const { role, lobby, ...reste } = v;
+      const p = { ...reste, actif: v.actif === "TRUE" };
+      if (!p.pilote_id) {
+        delete p.pilote_id;
+        const doublon = D.Pilotes.find(x => x.pilote_id === slug(p.pseudo) || norm(x.pseudo) === norm(p.pseudo));
+        if (doublon) return toast(`${doublon.pseudo} existe déjà : utilise « Modifier » sur sa ligne plutôt que « Nouveau pilote ».`, "err");
+      }
+      if (role === "Titulaire" && !lobby) return toast("Choisis le lobby du titulaire.", "err");
+      // Le lobby d'un titulaire déjà placé par une grille publiée se change dans l'onglet Grille (historique des lobbys)
+      if (role === "Titulaire" && p.pilote_id && lobby !== lobbyDe(p.pilote_id) && D.Grilles.some(g => g.saison_id === saison && g.pilote_id === p.pilote_id)) return toast("Ce pilote est déjà dans une grille publiée : change son lobby dans l'onglet Grille.", "err");
+      (async () => {
+        const avant = p.pilote_id && engagements().find(y => y.pilote_id === p.pilote_id) || {};
+        const changeRole = role && (role !== avant.role || (role === "Titulaire" && lobby !== lobbyDe(p.pilote_id)));
+        const r = await envoyer("pilote", { pilote: p }, "Pilote " + p.pseudo, { recharger: !changeRole });
+        if (!r.ok || r.demo) return;
+        if (changeRole) {
+          const id = p.pilote_id || r.pilote.pilote_id;
+          const e = role === "Titulaire" ? { role, categorie_id: lobby, ordre_reserve: "" }
+            : role === "Réserve" ? { role, categorie_id: "", ordre_reserve: avant.role === "Réserve" ? avant.ordre_reserve : reserves().length + 1 }
+            : { role, ordre_reserve: "" };
+          await envoyer("engagement", { engagement: { saison_id: saison, pilote_id: id, ...e } }, `${p.pseudo} : ${role}${role === "Titulaire" ? " Lobby " + lobby.slice(1) : ""}`);
+        }
+        ui.pilote = null; render();
+      })();
     }
   });
 

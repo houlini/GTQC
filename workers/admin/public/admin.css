@@ -96,3 +96,5 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .adm-cols.reserves .court { width: 100%; }
 @media (max-width: 1000px) { .adm-cols.reserves { grid-template-columns: 1fr; } }
 .warn-txt { color: var(--warn); font-weight: 600; }
+.adm.occupe { cursor: progress; }
+.adm.occupe .btn:disabled { opacity: .55; cursor: progress; }

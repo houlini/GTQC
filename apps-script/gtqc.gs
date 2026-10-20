@@ -436,6 +436,8 @@ function pilote(c) {
   const p = c.pilote || {};
   if (!p.pseudo && !p.pilote_id) return { ok: false, erreur: 'pseudo' };
   const id = p.pilote_id || slug(p.pseudo);
+  // Nouveau pilote (sans pilote_id) dont le pseudo donne l'identifiant d'un pilote existant : refusé, sinon sa fiche serait écrasée
+  if (!p.pilote_id && lire('Pilotes').lignes.some(x => x.pilote_id === id)) return { ok: false, erreur: 'existe', pilote_id: id };
   const propre = { pilote_id: id };
   CHAMPS_PILOTE.forEach(k => { if (k in p) propre[k] = p[k]; });
   if ('twitch' in propre) propre.twitch = nomChaine(propre.twitch);
