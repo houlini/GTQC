@@ -22,14 +22,28 @@
     <button type="button" data-tab="vods">VOD</button>
     <button type="button" data-tab="photos">Captures</button>
     <button type="button" data-tab="inscriptions">Inscriptions <span class="adm-count" id="nbInscr"></span></button>
+    <button type="button" data-tab="demandes">Demandes <span class="adm-count" id="nbDem"></span></button>
     <button type="button" data-tab="journal">Journal</button>
     <button type="button" data-tab="guide">Guide</button>
   </nav>
+  <button type="button" class="btn ghost petit" id="signaler" title="Signaler une erreur ou demander un changement">Signaler</button>
   <div class="adm-moi" id="moi"></div>
 </header>
 <div class="adm-demo" id="demo" hidden>Mode démo (local) : données du dépôt, rien n'est enregistré.</div>
 <main class="adm" id="main"><p class="muted">Chargement…</p></main>
 <div class="adm-toast" id="toast" role="status" aria-live="polite" hidden></div>
-<script src="admin.js"></script>
+<dialog class="adm-dlg" id="dlgSignaler" aria-labelledby="dlgTitre">
+  <form method="dialog" id="fSignaler" class="adm">
+    <h2 id="dlgTitre">Signaler</h2>
+    <p class="muted">Une erreur dans l'admin ou le site, ou un changement à demander. Le responsable la voit dans l'onglet Demandes et y répond.</p>
+    <div class="seg" role="group" aria-label="Type">
+      <label class="check"><input type="radio" name="type" value="erreur" checked> Erreur</label>
+      <label class="check"><input type="radio" name="type" value="changement"> Demande de changement</label>
+    </div>
+    <label>Onglet concerné<select name="onglet" id="sigOnglet"></select></label>
+    <label>Description<textarea name="texte" rows="5" required maxlength="2000" placeholder="Ce qui se passe, ce que tu attendais, ou le changement souhaité (manche, pilote, etc.)"></textarea></label>
+    <div class="adm-actions"><button class="btn" type="submit" value="envoyer">Envoyer</button><button class="btn ghost" type="button" id="sigAnnuler">Annuler</button></div>
+  </form>
+</dialog><script src="admin.js"></script>
 </body>
 </html>

@@ -17,6 +17,8 @@ const ACTIONS = {
   'POST /api/grille': 'grille',
   'POST /api/remplacements': 'remplacements',
   'POST /api/inscription': 'inscription',
+  'POST /api/demande': 'demande',
+  'POST /api/demande/statut': 'demandeStatut',
 };
 const MAX_OCTETS = 200 * 1024;
 // Une capture par envoi, réduite par le navigateur (base64 : environ 4/3 de l'image)

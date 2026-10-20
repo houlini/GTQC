@@ -8,7 +8,7 @@
      inscrire  → formulaire « Rejoindre » (onglet privé _Inscriptions)
    Actions admin (Worker gtqc-admin, derrière Cloudflare Access ; courriel dans _Admins) :
      etat, manche, resultats, penalites, vods, photo, photos, psn, pilote, engagement, grille,
-     remplacements, inscription
+     remplacements, inscription, demande, demandeStatut (onglet privé _Demandes)
 
    Onglets dont le nom commence par « _ » : jamais publiés.
    Propriétés du script (Paramètres du projet → Propriétés du script) :
@@ -45,7 +45,7 @@ function router(e, corps) {
 
     const admin = adminDe(p.courriel);
     if (!admin) return { ok: false, erreur: 'admin' };
-    const actions = { etat, manche, resultats, penalites, vods, photo, photos, capture, psn, pilote, engagement, grille, remplacements, inscription };
+    const actions = { etat, manche, resultats, penalites, vods, photo, photos, capture, psn, pilote, engagement, grille, remplacements, inscription, demande, demandeStatut };
     const f = actions[p.action];
     if (!f) return { ok: false, erreur: 'action' };
     if (f === etat) return etat(admin);
@@ -287,7 +287,7 @@ function inscrire(c) {
 function etat(admin) {
   const d = lireTout(classeur().getSheets().map(f => f.getName()).filter(nom => !ONGLETS_INTERNES.includes(nom)));
   d._Journal = (d._Journal || []).slice(-50).reverse();
-  return { ok: true, moi: admin, donnees: d };
+  return { ok: true, moi: Object.assign({ responsable: estResponsable(admin) }, admin), donnees: d };
 }
 
 /** Crée ou modifie une manche, avec ses horaires par lobby (Manches_Categories). */
@@ -484,6 +484,36 @@ function remplacements(c) {
   }));
   remplacerLignes('Remplacements', x => x.course_id === c.course_id, lignes);
   return { ok: true, resume: `${c.course_id} : ${lignes.length} absences` };
+}
+
+/* ---------- Demandes des admins (erreurs signalées, changements demandés) : onglet privé _Demandes ---------- */
+const STATUTS_DEMANDE = ['Nouvelle', 'Acceptée', 'Refusée', 'Faite'];
+// Le statut d'une demande se change seulement par un admin dont le rôle (_Admins.role) est « responsable »
+const estResponsable = admin => /^responsable$/i.test(String(admin && admin.role || ''));
+function feuilleDemandes() {
+  const ss = classeur();
+  let f = ss.getSheetByName('_Demandes');
+  if (!f) { f = ss.insertSheet('_Demandes'); f.appendRow(['id', 'recu_le', 'courriel', 'type', 'onglet', 'texte', 'statut', 'reponse', 'traite_le', 'traite_par']); }
+  return f;
+}
+function demande(c, admin) {
+  const texte = String(c.texte || '').trim().slice(0, 2000);
+  if (!texte) return { ok: false, erreur: 'champs' };
+  feuilleDemandes();
+  const id = Utilities.getUuid().slice(0, 8);
+  enregistrerLigne('_Demandes', () => false, {
+    id, recu_le: Utilities.formatDate(new Date(), FUSEAU, 'yyyy-MM-dd HH:mm'), courriel: admin.courriel,
+    type: c.type === 'erreur' ? 'Erreur' : 'Changement', onglet: String(c.onglet || '').slice(0, 40), texte, statut: 'Nouvelle',
+  });
+  return { ok: true, id, resume: `${id} ${c.type || ''}` };
+}
+function demandeStatut(c, admin) {
+  if (!estResponsable(admin)) return { ok: false, erreur: 'responsable' };
+  if (!c.id || !STATUTS_DEMANDE.includes(c.statut)) return { ok: false, erreur: 'statut' };
+  const maj = { id: c.id, statut: c.statut, traite_le: Utilities.formatDate(new Date(), FUSEAU, 'yyyy-MM-dd HH:mm'), traite_par: admin.courriel };
+  if ('reponse' in c) maj.reponse = String(c.reponse || '').slice(0, 1000);
+  enregistrerLigne('_Demandes', x => String(x.id) === String(c.id), maj);
+  return { ok: true, resume: `${c.id} ${c.statut}` };
 }
 
 function inscription(c) {

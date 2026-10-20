@@ -102,3 +102,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .warn-txt { color: var(--warn); font-weight: 600; }
 .adm.occupe { cursor: progress; }
 .adm.occupe .btn:disabled { opacity: .55; cursor: progress; }
+/* Signaler / Demandes */
+.btn.petit { padding: 6px 12px; font-size: 13px; }
+.adm-dlg { border: 1px solid var(--line); border-radius: 14px; background: var(--navy-2); color: var(--ink); padding: 0; width: min(560px, calc(100vw - 32px)); }
+.adm-dlg::backdrop { background: rgba(0, 8, 18, .65); }
+.adm-dlg .adm { padding: 20px; gap: 14px; }
+.adm-dlg .seg { display: flex; gap: 18px; flex-wrap: wrap; }
+.dem { display: grid; gap: 8px; }
+.dem .texte { white-space: pre-wrap; margin: 0; }
+.dem .reponse { margin: 0; padding: 8px 12px; border-left: 2px solid var(--accent); background: rgba(255,255,255,.04); }
+.tag.Acceptée, .tag.Faite { background: rgba(61,220,151,.18); color: var(--ok); }
+.tag.Refusée { background: rgba(255,122,122,.16); color: var(--err); }

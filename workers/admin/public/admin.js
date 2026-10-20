@@ -25,16 +25,16 @@
       const r = await rep.json();
       if (!r.ok) throw new Error(r.erreur || "etat");
       D = r.donnees;
-      $("moi").textContent = r.moi.nom + " · " + r.moi.courriel;
+      ui.moi = r.moi;
     } catch (err) {
       if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
         $("main").innerHTML = `<div class="adm-card err"><h2>Accès impossible</h2><p>${err.message === "admin" ? "Ton courriel n'est pas dans la liste des admins (onglet _Admins du classeur)." : "Le serveur ne répond pas (" + esc(err.message) + ")."}</p></div>`;
         return false;
       }
       await new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "../../../maquette/data.js"; s.onload = ok; s.onerror = ko; document.head.append(s); });
-      D = window.GTQC; demo = true; $("demo").hidden = false; $("moi").textContent = "démo";
+      D = window.GTQC; demo = true; $("demo").hidden = false; $("moi").textContent = "démo"; ui.moi = { courriel: "démo", responsable: true };
     }
-    for (const k of ["Vods", "Photos", "_PSN", "Grilles", "Remplacements", "_Inscriptions", "_Journal", "Engagements", "Penalites", "Manches_Categories"]) D[k] = D[k] || [];
+    for (const k of ["Vods", "Photos", "_PSN", "Grilles", "Remplacements", "_Inscriptions", "_Journal", "_Demandes", "Engagements", "Penalites", "Manches_Categories"]) D[k] = D[k] || [];
     saison = saison || cfg().saison_courante || "S02";
     return true;
   }
@@ -53,6 +53,7 @@
     taille: "le fichier est trop lourd.",
     format: "format d'image non accepté (JPEG, PNG ou WebP).",
     introuvable: "élément introuvable (déjà supprimé ?).",
+    responsable: "seul le responsable (rôle « responsable » dans _Admins) peut changer le statut d'une demande.",
   };
   let occupe = false;
   /** Enregistre une action. recharger: false pour enchaîner plusieurs envois et recharger une seule fois à la fin. */
@@ -546,6 +547,42 @@
           ${existe ? `<span class="muted">Pilote existant : ${esc(existe.pseudo)}</span>` : `<button type="button" class="btn ghost" data-icreer="reserve">Créer comme réserve</button><button type="button" class="btn ghost" data-icreer="pilote">Créer comme titulaire</button>`}</div></div>`; }).join("") || `<p class="muted">Aucune demande.</p>`}`;
   }
 
+  /* ---------- Demandes des admins (onglet privé _Demandes) ---------- */
+  const STATUTS_DEM = ["Nouvelle", "Acceptée", "Refusée", "Faite"];
+  const nomOnglet = id => (document.querySelector(`#tabs [data-tab="${id}"]`) || {}).firstChild?.textContent?.trim() || id || "";
+  function vueDemandes() {
+    const filtre = ui.fd || "ouvertes", resp = !!(ui.moi && ui.moi.responsable);
+    const liste = D._Demandes.slice().sort((a, b) => String(b.recu_le).localeCompare(String(a.recu_le)))
+      .filter(x => filtre === "toutes" || (filtre === "ouvertes" ? ["Nouvelle", "Acceptée", undefined, ""].includes(x.statut) : x.statut === filtre));
+    return `<div class="adm-head"><h1>Demandes</h1><div class="adm-actions"><select id="fd">${options([["ouvertes", "À traiter (nouvelles et acceptées)"], ["toutes", "Toutes"], ...STATUTS_DEM.map(s => [s, s])], filtre)}</select>
+        <button type="button" class="btn" data-signaler>+ Signaler</button></div></div>
+      <p class="muted">Erreurs signalées et changements demandés par les admins (bouton « Signaler » en haut de chaque page). ${resp ? "Tu es responsable : choisis le statut et réponds au besoin." : "Le responsable (rôle « responsable » dans l'onglet _Admins) accepte ou refuse chaque demande."}</p>
+      ${liste.map(x => `<div class="adm-card dem" data-dem="${esc(x.id)}">
+        <div class="adm-head"><h2>${esc(x.type || "Demande")} <small>${esc(nomOnglet(x.onglet))} · ${esc(x.recu_le)} · ${esc(x.courriel)}</small></h2><span class="tag ${esc(x.statut || "Nouvelle")}">${esc(x.statut || "Nouvelle")}</span></div>
+        <p class="texte">${esc(x.texte)}</p>
+        ${x.reponse ? `<p class="reponse"><b>Réponse :</b> ${esc(x.reponse)}${x.traite_par ? ` <small class="muted">(${esc(x.traite_par)}, ${esc(x.traite_le || "")})</small>` : ""}</p>` : ""}
+        ${resp ? `<div class="adm-actions"><select data-dstatut>${options(STATUTS_DEM.map(s => [s, s]), x.statut || "Nouvelle")}</select><input data-dreponse value="${esc(x.reponse || "")}" placeholder="Réponse (facultatif)"><button type="button" class="btn ghost" data-dsave>Enregistrer</button></div>` : ""}
+      </div>`).join("") || `<p class="muted">Aucune demande${filtre === "toutes" ? "" : " à traiter"}.</p>`}`;
+  }
+  function ouvrirSignaler() {
+    const sel = $("sigOnglet");
+    sel.innerHTML = options([...document.querySelectorAll("#tabs button")].map(b => [b.dataset.tab, nomOnglet(b.dataset.tab)]).concat([["site", "Site public (gtqc.net)"]]), tab === "demandes" ? "" : tab);
+    $("fSignaler").reset();
+    sel.value = tab === "demandes" ? sel.options[0].value : tab;
+    $("dlgSignaler").showModal();
+  }
+  $("signaler").addEventListener("click", ouvrirSignaler);
+  $("sigAnnuler").addEventListener("click", () => $("dlgSignaler").close());
+  $("fSignaler").addEventListener("submit", async e => {
+    e.preventDefault();
+    const v = Object.fromEntries(new FormData(e.target));
+    if (!String(v.texte || "").trim()) return;
+    $("dlgSignaler").close();
+    const r = await envoyer("demande", { type: v.type, onglet: v.onglet, texte: v.texte.trim() }, v.type === "erreur" ? "Erreur signalée" : "Changement demandé");
+    // Mode démo : la demande s'affiche quand même pour essayer l'onglet
+    if (r.demo) { D._Demandes.push({ id: "demo-" + Date.now(), recu_le: new Date().toISOString().slice(0, 16).replace("T", " "), courriel: "démo", type: v.type === "erreur" ? "Erreur" : "Changement", onglet: v.onglet, texte: v.texte.trim(), statut: "Nouvelle" }); render(); }
+  });
+
   function vueJournal() {
     return `<div class="adm-head"><h1>Journal</h1></div><table class="adm-table"><thead><tr><th>Date</th><th>Admin</th><th>Action</th><th>Détails</th></tr></thead><tbody>
       ${D._Journal.map(j => `<tr><td class="nowrap">${esc(j.date)}</td><td>${esc(j.courriel)}</td><td>${esc(j.action)}</td><td>${esc(j.details)}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">${demo ? "Pas de journal en mode démo." : "Rien pour l'instant."}</td></tr>`}</tbody></table>`;
@@ -572,12 +609,14 @@
   }
 
   const choixSaison = () => `<select id="saison">${options(D.Saisons.slice().sort((a, b) => b.saison_id.localeCompare(a.saison_id)).map(s => [s.saison_id, s.nom || s.saison_id]), saison)}</select>`;
-  const VUES = { manches: vueManches, resultats: vueResultats, grille: vueGrille, reserves: vueReserves, pilotes: vuePilotes, vods: vueVods, photos: vuePhotos, inscriptions: vueInscriptions, journal: vueJournal, guide: vueGuide };
+  const VUES = { manches: vueManches, resultats: vueResultats, grille: vueGrille, reserves: vueReserves, pilotes: vuePilotes, vods: vueVods, photos: vuePhotos, inscriptions: vueInscriptions, demandes: vueDemandes, journal: vueJournal, guide: vueGuide };
 
   function render() {
     document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === tab ? "page" : "false"));
     const n = D._Inscriptions.filter(x => !x.statut || x.statut === "Nouvelle").length;
     $("nbInscr").textContent = n ? n : "";
+    const nd = D._Demandes.filter(x => !x.statut || x.statut === "Nouvelle").length;
+    $("nbDem").textContent = nd ? nd : "";
     $("main").innerHTML = VUES[tab]();
     if (tab === "pilotes" && ui.focusQ) { const q = $("q"); q.focus(); q.setSelectionRange(q.value.length, q.value.length); ui.focusQ = false; }
   }
@@ -743,7 +782,7 @@
       if (mauvais.length) return toast("Les adresses doivent commencer par https://", "err");
       return envoyer("vods", { course_id: ui.vod, lignes: ui.vodB.lignes.filter(v => v.url).map(v => ({ ...v, publier: !no(v.publier) })) }, `VOD ${ui.vod}`);
     }
-    const carte = t.closest(".inscr");
+    if ("signaler" in d) return ouvrirSignaler();
     if (carte) {
       const x = D._Inscriptions.find(i => String(i.id) === carte.dataset.id);
       if ("isave" in d) return envoyer("inscription", { id: x.id, statut: carte.querySelector("[data-istatut]").value, note_admin: carte.querySelector("[data-inote]").value }, "Demande de " + x.pseudo_discord);
