@@ -53,6 +53,7 @@
     taille: "le fichier est trop lourd.",
     format: "format d'image non accepté (JPEG, PNG ou WebP).",
     introuvable: "élément introuvable (déjà supprimé ?).",
+    trop: "5 captures au plus par demande.",
     responsable: "seul le responsable (rôle « responsable » dans _Admins) peut changer le statut d'une demande.",
   };
   let occupe = false;
@@ -560,29 +561,88 @@
       ${liste.map(x => `<div class="adm-card dem" data-dem="${esc(x.id)}">
         <div class="adm-head"><h2>${esc(x.type || "Demande")} <small>${esc(nomOnglet(x.onglet))} · ${esc(x.recu_le)} · ${esc(x.courriel)}</small></h2><span class="tag ${esc(x.statut || "Nouvelle")}">${esc(x.statut || "Nouvelle")}</span></div>
         <p class="texte">${esc(x.texte)}</p>
+        ${(() => { const n = x.apercus ? x.apercus.length : String(x.captures || "").split(",").filter(Boolean).length; return n ? `<div><button type="button" class="btn ghost petit" data-dvoir>Voir ${n > 1 ? "les " + n + " captures" : "la capture"}</button></div>` : ""; })()}
         ${x.reponse ? `<p class="reponse"><b>Réponse :</b> ${esc(x.reponse)}${x.traite_par ? ` <small class="muted">(${esc(x.traite_par)}, ${esc(x.traite_le || "")})</small>` : ""}</p>` : ""}
         ${resp ? `<div class="adm-actions"><select data-dstatut>${options(STATUTS_DEM.map(s => [s, s]), x.statut || "Nouvelle")}</select><input data-dreponse value="${esc(x.reponse || "")}" placeholder="Réponse (facultatif)"><button type="button" class="btn ghost" data-dsave>Enregistrer</button></div>` : ""}
       </div>`).join("") || `<p class="muted">Aucune demande${filtre === "toutes" ? "" : " à traiter"}.</p>`}`;
+  }
+  // Captures jointes à la demande : réduites à 1920 px dans le navigateur, 5 au plus
+  let sigImages = [];
+  const MAX_SIG = 5;
+  function apercusSignaler() {
+    $("sigApercus").innerHTML = sigImages.map((img, i) => `<figure><img src="${img.apercu}" alt="Capture ${i + 1}"><button type="button" data-sigdel="${i}" aria-label="Retirer la capture ${i + 1}">×</button></figure>`).join("");
+  }
+  async function ajouterCapturesSignaler(fichiers) {
+    const liste = [...fichiers].filter(f => /^image\/(jpeg|png|webp)$/.test(f.type));
+    if (!liste.length) return toast("Choisis des images JPEG, PNG ou WebP.", "err");
+    for (const f of liste) {
+      if (sigImages.length >= MAX_SIG) { toast(`${MAX_SIG} captures au plus par demande.`, "warn"); break; }
+      try { sigImages.push(await reduire(f)); } catch (err) { toast(`${f.name} : image illisible.`, "err"); }
+    }
+    apercusSignaler();
   }
   function ouvrirSignaler() {
     const sel = $("sigOnglet");
     sel.innerHTML = options([...document.querySelectorAll("#tabs button")].map(b => [b.dataset.tab, nomOnglet(b.dataset.tab)]).concat([["site", "Site public (gtqc.net)"]]), tab === "demandes" ? "" : tab);
     $("fSignaler").reset();
     sel.value = tab === "demandes" ? sel.options[0].value : tab;
+    sigImages = []; apercusSignaler();
     $("dlgSignaler").showModal();
   }
   $("signaler").addEventListener("click", ouvrirSignaler);
   $("sigAnnuler").addEventListener("click", () => $("dlgSignaler").close());
+  $("sigFichiers").addEventListener("change", e => { if (e.target.files.length) ajouterCapturesSignaler(e.target.files); e.target.value = ""; });
+  $("sigApercus").addEventListener("click", e => { const b = e.target.closest("[data-sigdel]"); if (b) { sigImages.splice(+b.dataset.sigdel, 1); apercusSignaler(); } });
+  const zone = $("sigDrop");
+  zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("over"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("over"));
+  zone.addEventListener("drop", e => { e.preventDefault(); zone.classList.remove("over"); ajouterCapturesSignaler(e.dataTransfer.files); });
+  // Ctrl+V d'une capture (outil Capture d'écran de Windows, Impr. écran…) pendant que le formulaire est ouvert
+  $("dlgSignaler").addEventListener("paste", e => {
+    const imgs = [...(e.clipboardData || {}).files || []].filter(f => f.type.startsWith("image/"));
+    if (imgs.length) { e.preventDefault(); ajouterCapturesSignaler(imgs); }
+  });
   $("fSignaler").addEventListener("submit", async e => {
     e.preventDefault();
     const v = Object.fromEntries(new FormData(e.target));
     if (!String(v.texte || "").trim()) return;
+    const images = sigImages.slice();
     $("dlgSignaler").close();
-    const r = await envoyer("demande", { type: v.type, onglet: v.onglet, texte: v.texte.trim() }, v.type === "erreur" ? "Erreur signalée" : "Changement demandé");
-    // Mode démo : la demande s'affiche quand même pour essayer l'onglet
-    if (r.demo) { D._Demandes.push({ id: "demo-" + Date.now(), recu_le: new Date().toISOString().slice(0, 16).replace("T", " "), courriel: "démo", type: v.type === "erreur" ? "Erreur" : "Changement", onglet: v.onglet, texte: v.texte.trim(), statut: "Nouvelle" }); render(); }
+    const libelle = v.type === "erreur" ? "Erreur signalée" : "Changement demandé";
+    const corps = { type: v.type, onglet: v.onglet, texte: v.texte.trim() };
+    if (demo) {
+      // Mode démo : la demande s'affiche quand même (captures comprises) pour essayer l'onglet
+      D._Demandes.push({ id: "demo-" + Date.now(), recu_le: new Date().toISOString().slice(0, 16).replace("T", " "), courriel: "démo", ...corps, type: v.type === "erreur" ? "Erreur" : "Changement", statut: "Nouvelle", apercus: images.map(i => i.apercu) });
+      toast(`Mode démo : « ${libelle} » non enregistré.`, "warn");
+      return render();
+    }
+    const r = await envoyer("demande", corps, libelle, { recharger: !images.length });
+    if (!r.ok || !images.length) return;
+    let faites = 0;
+    for (const [i, img] of images.entries()) {
+      toast(`Envoi de la capture ${i + 1} / ${images.length}…`, "warn");
+      const rc = await envoyer("demandeCapture", { id: r.id, data: img.data, mime: img.mime }, `Capture ${i + 1}`, { recharger: false });
+      if (rc.ok) faites++;
+    }
+    await charger(); render();
+    toast(`${libelle} : enregistré${faites ? ` avec ${faites} capture${faites > 1 ? "s" : ""}` : ""}${faites < images.length ? ` (${images.length - faites} non envoyée${images.length - faites > 1 ? "s" : ""})` : ""}.`, faites < images.length ? "err" : "ok");
   });
-
+  async function voirCapturesDemande(bouton) {
+    const carte = bouton.closest("[data-dem]"), x = D._Demandes.find(d => String(d.id) === carte.dataset.dem);
+    const boite = document.createElement("div"); boite.className = "captures";
+    if (x.apercus) { boite.innerHTML = x.apercus.map((a, i) => `<img src="${a}" alt="Capture ${i + 1}">`).join(""); return bouton.replaceWith(boite); }
+    bouton.disabled = true; bouton.textContent = "Chargement…";
+    try {
+      for (const [i, id] of String(x.captures || "").split(",").filter(Boolean).entries()) {
+        const rep = await fetch("/api/demande/voir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fichier: id }) });
+        const r = await rep.json().catch(() => ({ ok: false, erreur: "acces" }));
+        if (!r.ok) throw new Error(ERREURS[r.erreur] || r.erreur);
+        const img = document.createElement("img"); img.alt = `Capture ${i + 1}`; img.src = `data:${r.mime};base64,${r.data}`;
+        boite.append(img);
+      }
+      bouton.replaceWith(boite);
+    } catch (err) { bouton.disabled = false; bouton.textContent = "Réessayer"; toast("Captures illisibles : " + err.message, "err"); }
+  }
   function vueJournal() {
     return `<div class="adm-head"><h1>Journal</h1></div><table class="adm-table"><thead><tr><th>Date</th><th>Admin</th><th>Action</th><th>Détails</th></tr></thead><tbody>
       ${D._Journal.map(j => `<tr><td class="nowrap">${esc(j.date)}</td><td>${esc(j.courriel)}</td><td>${esc(j.action)}</td><td>${esc(j.details)}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">${demo ? "Pas de journal en mode démo." : "Rien pour l'instant."}</td></tr>`}</tbody></table>`;
@@ -783,6 +843,7 @@
       return envoyer("vods", { course_id: ui.vod, lignes: ui.vodB.lignes.filter(v => v.url).map(v => ({ ...v, publier: !no(v.publier) })) }, `VOD ${ui.vod}`);
     }
     if ("signaler" in d) return ouvrirSignaler();
+    if ("dvoir" in d) return voirCapturesDemande(t);
     if (carte) {
       const x = D._Inscriptions.find(i => String(i.id) === carte.dataset.id);
       if ("isave" in d) return envoyer("inscription", { id: x.id, statut: carte.querySelector("[data-istatut]").value, note_admin: carte.querySelector("[data-inote]").value }, "Demande de " + x.pseudo_discord);

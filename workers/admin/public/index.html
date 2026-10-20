@@ -42,7 +42,11 @@
     </div>
     <label>Onglet concerné<select name="onglet" id="sigOnglet"></select></label>
     <label>Description<textarea name="texte" rows="5" required maxlength="2000" placeholder="Ce qui se passe, ce que tu attendais, ou le changement souhaité (manche, pilote, etc.)"></textarea></label>
-    <div class="adm-actions"><button class="btn" type="submit" value="envoyer">Envoyer</button><button class="btn ghost" type="button" id="sigAnnuler">Annuler</button></div>
+    <div class="sig-captures">
+      <label class="drop" id="sigDrop"><input type="file" id="sigFichiers" accept="image/jpeg,image/png,image/webp" multiple hidden>
+        <b>Captures d'écran (facultatif, 5 au plus)</b><span>Glisse-les ici, clique pour les choisir ou colle-les (Ctrl+V)</span></label>
+      <div class="sig-apercus" id="sigApercus"></div>
+    </div>    <div class="adm-actions"><button class="btn" type="submit" value="envoyer">Envoyer</button><button class="btn ghost" type="button" id="sigAnnuler">Annuler</button></div>
   </form>
 </dialog><script src="admin.js"></script>
 </body>

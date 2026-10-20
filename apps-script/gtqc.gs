@@ -8,13 +8,14 @@
      inscrire  → formulaire « Rejoindre » (onglet privé _Inscriptions)
    Actions admin (Worker gtqc-admin, derrière Cloudflare Access ; courriel dans _Admins) :
      etat, manche, resultats, penalites, vods, photo, photos, psn, pilote, engagement, grille,
-     remplacements, inscription, demande, demandeStatut (onglet privé _Demandes)
+     remplacements, inscription, demande, demandeStatut, demandeCapture, demandeVoir (onglet privé _Demandes)
 
    Onglets dont le nom commence par « _ » : jamais publiés.
    Propriétés du script (Paramètres du projet → Propriétés du script) :
      SECRET            code partagé avec les Workers (obligatoire)
      NOTIF_COURRIEL    adresse avertie à chaque inscription (facultatif)
      DOSSIER_PHOTOS    dossier Drive des captures des manches (créé au premier envoi)
+     DOSSIER_DEMANDES  dossier Drive des captures jointes aux demandes (privé, créé au premier envoi)
    ========================================================================= */
 
 const SHEET_ID = '1LqsTQ97T14vUCWpr3Bj6HyFB5K2nuciy7moEFfzaQEk';
@@ -45,7 +46,7 @@ function router(e, corps) {
 
     const admin = adminDe(p.courriel);
     if (!admin) return { ok: false, erreur: 'admin' };
-    const actions = { etat, manche, resultats, penalites, vods, photo, photos, capture, psn, pilote, engagement, grille, remplacements, inscription, demande, demandeStatut };
+    const actions = { etat, manche, resultats, penalites, vods, photo, photos, capture, psn, pilote, engagement, grille, remplacements, inscription, demande, demandeStatut, demandeCapture, demandeVoir };
     const f = actions[p.action];
     if (!f) return { ok: false, erreur: 'action' };
     if (f === etat) return etat(admin);
@@ -493,7 +494,7 @@ const estResponsable = admin => /^responsable$/i.test(String(admin && admin.role
 function feuilleDemandes() {
   const ss = classeur();
   let f = ss.getSheetByName('_Demandes');
-  if (!f) { f = ss.insertSheet('_Demandes'); f.appendRow(['id', 'recu_le', 'courriel', 'type', 'onglet', 'texte', 'statut', 'reponse', 'traite_le', 'traite_par']); }
+  if (!f) { f = ss.insertSheet('_Demandes'); f.appendRow(['id', 'recu_le', 'courriel', 'type', 'onglet', 'texte', 'captures', 'statut', 'reponse', 'traite_le', 'traite_par']); }
   return f;
 }
 function demande(c, admin) {
@@ -507,6 +508,38 @@ function demande(c, admin) {
   });
   return { ok: true, id, resume: `${id} ${c.type || ''}` };
 }
+/** Capture jointe à une demande (base64, réduite par le navigateur) : fichier privé dans Drive, id ajouté à la demande. */
+const MAX_CAPTURES_DEMANDE = 5;
+function demandeCapture(c, admin) {
+  if (!c.id || !c.data) return { ok: false, erreur: 'champs' };
+  if (!MIMES_PHOTO.includes(c.mime)) return { ok: false, erreur: 'format' };
+  const d = lire('_Demandes').lignes.find(x => String(x.id) === String(c.id));
+  if (!d) return { ok: false, erreur: 'introuvable' };
+  const deja = String(d.captures || '').split(',').filter(Boolean);
+  if (deja.length >= MAX_CAPTURES_DEMANDE) return { ok: false, erreur: 'trop' };
+  const octets = Utilities.base64Decode(String(c.data));
+  if (!octets.length || octets.length > MAX_OCTETS_PHOTO) return { ok: false, erreur: 'taille' };
+  // Jamais de lien public : l'admin la lit avec l'action demandeVoir
+  const fichier = dossierDemandes().createFile(Utilities.newBlob(octets, c.mime, `demande-${c.id}-${deja.length + 1}.${c.mime.split('/')[1].replace('jpeg', 'jpg')}`));
+  enregistrerLigne('_Demandes', x => String(x.id) === String(c.id), { id: c.id, captures: deja.concat(fichier.getId()).join(',') });
+  return { ok: true, fichier: fichier.getId(), resume: `${c.id} : capture ${deja.length + 1}` };
+}
+/** Capture d'une demande, renvoyée en base64 (seulement un fichier listé dans _Demandes). */
+function demandeVoir(c) {
+  const connu = lire('_Demandes').lignes.some(x => String(x.captures || '').split(',').includes(String(c.fichier || '')));
+  if (!c.fichier || !connu) return { ok: false, erreur: 'introuvable' };
+  const blob = DriveApp.getFileById(c.fichier).getBlob();
+  return { ok: true, mime: blob.getContentType(), data: Utilities.base64Encode(blob.getBytes()) };
+}
+function dossierDemandes() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('DOSSIER_DEMANDES');
+  if (id) return DriveApp.getFolderById(id);
+  const dossier = DriveApp.createFolder('GTQC — Captures des demandes');
+  props.setProperty('DOSSIER_DEMANDES', dossier.getId());
+  return dossier;
+}
+
 function demandeStatut(c, admin) {
   if (!estResponsable(admin)) return { ok: false, erreur: 'responsable' };
   if (!c.id || !STATUTS_DEMANDE.includes(c.statut)) return { ok: false, erreur: 'statut' };

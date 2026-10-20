@@ -19,6 +19,8 @@ const ACTIONS = {
   'POST /api/inscription': 'inscription',
   'POST /api/demande': 'demande',
   'POST /api/demande/statut': 'demandeStatut',
+  'POST /api/demande/capture': 'demandeCapture',
+  'POST /api/demande/voir': 'demandeVoir',
 };
 const MAX_OCTETS = 200 * 1024;
 // Une capture par envoi, réduite par le navigateur (base64 : environ 4/3 de l'image)
@@ -49,7 +51,7 @@ export default {
     let corps = '{}';
     if (request.method === 'POST') {
       corps = await request.text();
-      if (corps.length > (action === 'photo' ? MAX_OCTETS_PHOTO : MAX_OCTETS)) return json({ ok: false, erreur: 'taille' }, 413);
+      if (corps.length > (action === 'photo' || action === 'demandeCapture' ? MAX_OCTETS_PHOTO : MAX_OCTETS)) return json({ ok: false, erreur: 'taille' }, 413);
     }
     const r = await script(env, action, courriel, corps);
     return json(r, r.ok ? 200 : r.erreur === 'script' ? 502 : r.erreur === 'admin' ? 403 : 400);
