@@ -54,6 +54,7 @@
     format: "format d'image non accepté (JPEG, PNG ou WebP).",
     introuvable: "élément introuvable (déjà supprimé ?).",
     trop: "5 captures au plus par demande.",
+    route: "action inconnue du serveur (l'admin en ligne n'est pas à jour).",
     responsable: "seul le responsable (rôle « responsable » dans _Admins) peut changer le statut d'une demande.",
   };
   let occupe = false;
@@ -552,19 +553,24 @@
   const STATUTS_DEM = ["Nouvelle", "Acceptée", "Refusée", "Faite"];
   const nomOnglet = id => (document.querySelector(`#tabs [data-tab="${id}"]`) || {}).firstChild?.textContent?.trim() || id || "";
   function vueDemandes() {
-    const filtre = ui.fd || "ouvertes", resp = !!(ui.moi && ui.moi.responsable);
-    const liste = D._Demandes.slice().sort((a, b) => String(b.recu_le).localeCompare(String(a.recu_le)))
-      .filter(x => filtre === "toutes" || (filtre === "ouvertes" ? ["Nouvelle", "Acceptée", undefined, ""].includes(x.statut) : x.statut === filtre));
-    return `<div class="adm-head"><h1>Demandes</h1><div class="adm-actions"><select id="fd">${options([["ouvertes", "À traiter (nouvelles et acceptées)"], ["toutes", "Toutes"], ...STATUTS_DEM.map(s => [s, s])], filtre)}</select>
-        <button type="button" class="btn" data-signaler>+ Signaler</button></div></div>
-      <p class="muted">Erreurs signalées et changements demandés par les admins (bouton « Signaler » en haut de chaque page). ${resp ? "Tu es responsable : choisis le statut et réponds au besoin." : "Le responsable (rôle « responsable » dans l'onglet _Admins) accepte ou refuse chaque demande."}</p>
-      ${liste.map(x => `<div class="adm-card dem" data-dem="${esc(x.id)}">
-        <div class="adm-head"><h2>${esc(x.type || "Demande")} <small>${esc(nomOnglet(x.onglet))} · ${esc(x.recu_le)} · ${esc(x.courriel)}</small></h2><span class="tag ${esc(x.statut || "Nouvelle")}">${esc(x.statut || "Nouvelle")}</span></div>
+    const resp = !!(ui.moi && ui.moi.responsable), vue = ui.fd || "ouvertes";
+    const ouverte = x => !x.statut || x.statut === "Nouvelle" || x.statut === "Acceptée";
+    const toutes = D._Demandes.slice().sort((a, b) => String(b.recu_le).localeCompare(String(a.recu_le)));
+    const nO = toutes.filter(ouverte).length;
+    const liste = vue === "ouvertes" ? toutes.filter(ouverte) : vue === "fermees" ? toutes.filter(x => !ouverte(x)) : toutes;
+    // Le responsable répond d'un clic : les boutons proposés dépendent du statut actuel
+    const actions = s => s === "Acceptée" ? [["Faite", "Marquer faite"], ["Refusée", "Refuser"]] : s === "Refusée" || s === "Faite" ? [["Nouvelle", "Rouvrir"]] : [["Acceptée", "Accepter"], ["Refusée", "Refuser"]];
+    return `<div class="adm-head"><h1>Demandes</h1>
+        <div class="seg">${[["ouvertes", `À traiter (${nO})`], ["fermees", `Traitées (${toutes.length - nO})`], ["toutes", "Toutes"]].map(([k, l]) => `<button type="button" data-fd="${k}" aria-pressed="${vue === k}">${l}</button>`).join("")}</div></div>
+      <p class="muted">${resp ? "Accepte, refuse ou marque comme faite. Ta réponse est visible par les admins." : "Le responsable répond à chaque demande ici."} Nouvelle demande : bouton « Signaler » en haut.</p>
+      ${liste.map(x => { const s = x.statut || "Nouvelle", n = x.apercus ? x.apercus.length : String(x.captures || "").split(",").filter(Boolean).length;
+        return `<article class="adm-card dem" data-dem="${esc(x.id)}">
+        <div class="dem-tete"><span class="tag ${esc(s)}">${esc(s)}</span><b>${esc(x.type || "Demande")}</b><span class="muted">${esc(nomOnglet(x.onglet))} · ${esc(x.recu_le)} · ${esc(String(x.courriel || "").split("@")[0])}</span></div>
         <p class="texte">${esc(x.texte)}</p>
-        ${(() => { const n = x.apercus ? x.apercus.length : String(x.captures || "").split(",").filter(Boolean).length; return n ? `<div><button type="button" class="btn ghost petit" data-dvoir>Voir ${n > 1 ? "les " + n + " captures" : "la capture"}</button></div>` : ""; })()}
-        ${x.reponse ? `<p class="reponse"><b>Réponse :</b> ${esc(x.reponse)}${x.traite_par ? ` <small class="muted">(${esc(x.traite_par)}, ${esc(x.traite_le || "")})</small>` : ""}</p>` : ""}
-        ${resp ? `<div class="adm-actions"><select data-dstatut>${options(STATUTS_DEM.map(s => [s, s]), x.statut || "Nouvelle")}</select><input data-dreponse value="${esc(x.reponse || "")}" placeholder="Réponse (facultatif)"><button type="button" class="btn ghost" data-dsave>Enregistrer</button></div>` : ""}
-      </div>`).join("") || `<p class="muted">Aucune demande${filtre === "toutes" ? "" : " à traiter"}.</p>`}`;
+        ${n ? `<div><button type="button" class="btn ghost petit" data-dvoir>Voir ${n > 1 ? "les " + n + " captures" : "la capture"}</button></div>` : ""}
+        ${x.reponse ? `<p class="reponse">${esc(x.reponse)}${x.traite_par ? ` <span class="muted">· ${esc(String(x.traite_par).split("@")[0])}, ${esc(x.traite_le || "")}</span>` : ""}</p>` : ""}
+        ${resp ? `<div class="adm-actions"><input data-dreponse value="${esc(x.reponse || "")}" placeholder="Réponse (facultatif)">${actions(s).map(([v, l], i) => `<button type="button" class="btn${i ? " ghost" : ""}" data-dstat="${v}">${l}</button>`).join("")}</div>` : ""}
+      </article>`; }).join("") || `<p class="muted">${vue === "ouvertes" ? "Rien à traiter." : "Aucune demande."}</p>`}`;
   }
   // Captures jointes à la demande : réduites à 1920 px dans le navigateur, 5 au plus
   let sigImages = [];
@@ -844,6 +850,12 @@
     }
     if ("signaler" in d) return ouvrirSignaler();
     if ("dvoir" in d) return voirCapturesDemande(t);
+    if (d.fd) { ui.fd = d.fd; return render(); }
+    if (d.dstat) {
+      const c = t.closest("[data-dem]");
+      return envoyer("demandeStatut", { id: c.dataset.dem, statut: d.dstat, reponse: c.querySelector("[data-dreponse]").value }, `Demande ${d.dstat === "Nouvelle" ? "rouverte" : d.dstat.toLowerCase()}`);
+    }
+    const carte = t.closest(".inscr");
     if (carte) {
       const x = D._Inscriptions.find(i => String(i.id) === carte.dataset.id);
       if ("isave" in d) return envoyer("inscription", { id: x.id, statut: carte.querySelector("[data-istatut]").value, note_admin: carte.querySelector("[data-inote]").value }, "Demande de " + x.pseudo_discord);

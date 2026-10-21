@@ -18,8 +18,9 @@ const ACTIONS = {
   'POST /api/remplacements': 'remplacements',
   'POST /api/inscription': 'inscription',
   'POST /api/demande': 'demande',
-  'POST /api/demande/statut': 'demandeStatut',
-  'POST /api/demande/capture': 'demandeCapture',
+  // Même nom que l'action : l'admin envoie à /api/<action>
+  'POST /api/demandeStatut': 'demandeStatut',
+  'POST /api/demandeCapture': 'demandeCapture',
   'POST /api/demande/voir': 'demandeVoir',
 };
 const MAX_OCTETS = 200 * 1024;
@@ -47,7 +48,7 @@ export default {
       return lireCapture(env, photo);
     }
     const action = ACTIONS[request.method + ' ' + url.pathname];
-    if (!action) return json({ ok: false, erreur: 'introuvable' }, 404);
+    if (!action) return json({ ok: false, erreur: 'route' }, 404);
     let corps = '{}';
     if (request.method === 'POST') {
       corps = await request.text();

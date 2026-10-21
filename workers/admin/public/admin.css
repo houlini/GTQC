@@ -121,3 +121,5 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .sig-apercus button { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(0,8,18,.8); color: #fff; cursor: pointer; line-height: 1; }
 .dem .captures { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
 .dem .captures img { max-width: min(100%, 520px); border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; }
+.dem-tete { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dem .adm-actions input { flex: 1 1 260px; width: auto; }
