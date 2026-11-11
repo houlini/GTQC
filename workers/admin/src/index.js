@@ -22,6 +22,8 @@ const ACTIONS = {
   'POST /api/demandeStatut': 'demandeStatut',
   'POST /api/demandeCapture': 'demandeCapture',
   'POST /api/demandeMessage': 'demandeMessage',
+  'POST /api/evenement': 'evenement',
+  'POST /api/evenementImage': 'evenementImage',
   'POST /api/demande/voir': 'demandeVoir',
 };
 const MAX_OCTETS = 200 * 1024;
@@ -53,7 +55,7 @@ export default {
     let corps = '{}';
     if (request.method === 'POST') {
       corps = await request.text();
-      if (corps.length > (action === 'photo' || action === 'demandeCapture' ? MAX_OCTETS_PHOTO : MAX_OCTETS)) return json({ ok: false, erreur: 'taille' }, 413);
+      if (corps.length > (['photo', 'demandeCapture', 'evenementImage'].includes(action) ? MAX_OCTETS_PHOTO : MAX_OCTETS)) return json({ ok: false, erreur: 'taille' }, 413);
     }
     const r = await script(env, action, courriel, corps);
     return json(r, r.ok ? 200 : r.erreur === 'script' ? 502 : r.erreur === 'admin' ? 403 : 400);

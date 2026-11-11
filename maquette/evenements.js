@@ -17,6 +17,8 @@
     : /hypercar|endurance|lmh|prototype/i.test(e.titre + " " + (e.voitures || "")) ? "proto" : "ligue";
   // Photo du bandeau : celle de l'événement (colonne image), sinon la Porsche GTQC au stand
   const PHOTO_DEFAUT = "evenements/gtqc-porsche-stand.jpg";
+  // Image envoyée depuis l'admin (Drive, adresse complète) ou fichier du site (chemin sous assets/img/)
+  const srcImage = (img, w) => /^https:\/\/lh3\./.test(img) ? `${img}=w${w}` : /^https?:/.test(img) ? img : G.IMG + img;
   const circuitDe = e => {
     if (!e.circuit_id) return null;
     const c = G.circuits[e.circuit_id];
@@ -33,7 +35,7 @@
     const c = circuitDe(prochain), tr = traceDe(prochain), cal = G.cfg.calendrier_google_url;
     $("hero").className = "ev-hero th-" + theme(prochain);
     $("hero").innerHTML = `
-      <div class="ev-photo" aria-hidden="true" style="background-image:url('${G.IMG + esc(prochain.image || PHOTO_DEFAUT)}')"></div>
+      <div class="ev-photo" aria-hidden="true" style="background-image:url('${esc(srcImage(prochain.image || PHOTO_DEFAUT, 1920))}')"></div>
       <div class="ev-hero-in">
         <div class="ev-badges"><span class="badge next">Prochain événement</span><span class="badge">${esc(THEMES[theme(prochain)])}</span></div>
         <h2>${esc(prochain.titre)}</h2>
@@ -66,7 +68,7 @@
       <div class="ev-card-top">
         <span class="ev-chip"><b>${esc(fmtJour.format(d))}</b>${esc(fmtMois.format(d).replace(".", ""))}</span>
         <span class="ev-kind">${esc(THEMES[theme(e)])}</span>
-        ${e.image ? `<img class="ev-cover" src="${G.IMG + esc(e.image)}" alt="Affiche : ${esc(e.titre)}" loading="lazy">`
+        ${e.image ? `<img class="ev-cover" src="${esc(srcImage(e.image, 800))}" alt="Affiche : ${esc(e.titre)}" loading="lazy">`
           : tr ? `<img src="${tr}" alt="" loading="lazy" onerror="this.remove()">` : ""}
       </div>
       <div class="ev-card-body">

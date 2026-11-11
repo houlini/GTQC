@@ -8,7 +8,7 @@
      inscrire  → formulaire « Rejoindre » (onglet privé _Inscriptions)
    Actions admin (Worker gtqc-admin, derrière Cloudflare Access ; courriel dans _Admins) :
      etat, manche, resultats, penalites, vods, photo, photos, psn, pilote, engagement, grille,
-     remplacements, inscription, demande, demandeStatut, demandeCapture, demandeVoir, demandeMessage (onglets privés _Demandes et _Demandes_Messages)
+     remplacements, inscription, demande, demandeStatut, demandeCapture, demandeVoir, demandeMessage (onglets privés _Demandes et _Demandes_Messages), evenement, evenementImage
 
    Onglets dont le nom commence par « _ » : jamais publiés.
    Propriétés du script (Paramètres du projet → Propriétés du script) :
@@ -46,7 +46,7 @@ function router(e, corps) {
 
     const admin = adminDe(p.courriel);
     if (!admin) return { ok: false, erreur: 'admin' };
-    const actions = { etat, manche, resultats, penalites, vods, photo, photos, capture, psn, pilote, engagement, grille, remplacements, inscription, demande, demandeStatut, demandeCapture, demandeVoir, demandeMessage };
+    const actions = { etat, manche, resultats, penalites, vods, photo, photos, capture, psn, pilote, engagement, grille, remplacements, inscription, demande, demandeStatut, demandeCapture, demandeVoir, demandeMessage, evenement, evenementImage };
     const f = actions[p.action];
     if (!f) return { ok: false, erreur: 'action' };
     if (f === etat) return etat(admin);
@@ -570,6 +570,34 @@ function demandeMessage(c, admin) {
   if (!lire('_Demandes').lignes.some(x => String(x.id) === String(c.id))) return { ok: false, erreur: 'introuvable' };
   const id = ajouterMessage(c.id, admin, texte, 'message');
   return { ok: true, id, resume: `${c.id} : message` };
+}
+
+/* ---------- Événements spéciaux (onglet public Evenements, page Événements du site) ---------- */
+const CHAMPS_EVENEMENT = ['date', 'heure', 'titre', 'description', 'circuit_id', 'voitures', 'statut', 'image', 'lien', 'theme', 'responsable', 'publier'];
+function evenement(c) {
+  const e = c.evenement || {};
+  if (!String(e.titre || '').trim() || !/^\d{4}-\d{2}-\d{2}$/.test(e.date || '')) return { ok: false, erreur: 'champs' };
+  let id = e.evenement_id;
+  if (!id) {
+    // EV-AAAAMMJJ, comme les événements existants ; -2, -3… s'il y en a déjà un ce jour-là
+    const ids = lire('Evenements').lignes.map(x => String(x.evenement_id));
+    const base = 'EV-' + e.date.replace(/-/g, '');
+    id = base;
+    for (let n = 2; ids.includes(id); n++) id = `${base}-${n}`;
+  }
+  const propre = { evenement_id: id };
+  CHAMPS_EVENEMENT.forEach(k => { if (k in e) propre[k] = typeof e[k] === 'string' ? e[k].trim().slice(0, 1000) : e[k]; });
+  enregistrerLigne('Evenements', x => String(x.evenement_id) === id, propre);
+  return { ok: true, evenement: propre, resume: `${id} ${propre.titre || ''}` };
+}
+/** Affiche ou photo d'un événement : fichier Drive lisible par lien (public, comme les captures des manches). */
+function evenementImage(c) {
+  if (!c.data || !MIMES_PHOTO.includes(c.mime)) return { ok: false, erreur: 'format' };
+  const octets = Utilities.base64Decode(String(c.data));
+  if (!octets.length || octets.length > MAX_OCTETS_PHOTO) return { ok: false, erreur: 'taille' };
+  const fichier = dossierPhotos().createFile(Utilities.newBlob(octets, c.mime, `evenement-${Date.now()}.${c.mime.split('/')[1].replace('jpeg', 'jpg')}`));
+  fichier.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return { ok: true, url: 'https://lh3.googleusercontent.com/d/' + fichier.getId(), resume: fichier.getName() };
 }
 
 function inscription(c) {

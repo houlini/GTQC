@@ -135,3 +135,5 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .dem-repondre { display: flex; gap: 10px; align-items: flex-end; }
 .dem-repondre textarea { flex: 1; resize: vertical; min-height: 44px; }
 .dem-statut { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid var(--line); }
+.ev-image { display: grid; gap: 10px; }
+.ev-image img { max-width: 360px; max-height: 240px; border-radius: 10px; border: 1px solid var(--line); object-fit: cover; }

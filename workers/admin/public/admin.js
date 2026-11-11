@@ -169,6 +169,63 @@
       <div class="adm-actions"><button class="btn" type="submit">Enregistrer</button><button class="btn ghost" type="button" data-cancel>Annuler</button></div></form>`;
   }
 
+  /* ---------- Événements spéciaux (onglet public Evenements → page Événements du site) ---------- */
+  const STATUTS_EV = [["Idée", "Idée (pas encore annoncé)"], ["Prévu", "Confirmé"], ["Terminé", "Terminé"], ["Annulé", "Annulé"]];
+  const THEMES_EV = [["", "Auto (d'après le titre)"], ["ligue", "Communauté"], ["proto", "Endurance"], ["terre", "Rallye"], ["glace", "Sur glace"], ["bresil", "Formule 1"], ["kart", "Karting"]];
+  // Image : adresse Drive (envoi depuis l'admin) ou chemin sous assets/img/ du site
+  const srcEvenement = (img, w) => !img ? "" : /^https:\/\/lh3\./.test(img) ? `${img}=w${w}` : /^https?:/.test(img) ? img : "https://gtqc.net/assets/img/" + img;
+  function vueEvenements() {
+    const evs = (D.Evenements || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    const e = ui.ev === "nouveau" ? { statut: "Idée", publier: false } : evs.find(x => x.evenement_id === ui.ev);
+    const gt7 = (D.Circuits_GT7 || []).slice().sort((a, b) => String(a.nom_officiel).localeCompare(String(b.nom_officiel), "fr"))
+      .map(c => [c.layout_id, c.nom_officiel + (c.variante && c.variante !== "Complet" ? " · " + c.variante : "")]);
+    const img = e && (ui.evImage ?? e.image);
+    return `<div class="adm-head"><h1>Événements</h1><div class="adm-actions"><button type="button" class="btn" data-evnew>+ Nouvel événement</button></div></div>
+      <p class="muted">Événements spéciaux, sans points (le dimanche sans course). Un événement « Publié » s'affiche sur la page Événements du site : le prochain en vedette avec un compte à rebours, les autres en cartes. Le site se met à jour dans les 5 minutes.</p>
+      ${e ? `<form class="adm-card" id="fEvenement"><h2>${e.evenement_id ? "Modifier " + esc(e.titre) : "Nouvel événement"}</h2>
+        <input type="hidden" name="evenement_id" value="${esc(e.evenement_id || "")}">
+        <div class="adm-grid">
+          <label class="wide">Titre<input name="titre" value="${esc(e.titre || "")}" required placeholder="ex. Raptor sur glace"></label>
+          ${champ("date", "Date", e.date, "date", "required")}${champ("heure", "Heure", e.heure, "time")}
+          <label>Statut<select name="statut">${options(STATUTS_EV, e.statut || "Idée")}</select></label>
+          <label>Publié sur le site<select name="publier">${options([["TRUE", "Oui"], ["FALSE", "Non"]], yes(e.publier) ? "TRUE" : "FALSE")}</select></label>
+          <label class="wide">Circuit<select name="circuit_id">${options(gt7, e.circuit_id, "Aucun / à déterminer")}</select></label>
+          ${champ("voitures", "Voitures", e.voitures, "text", 'placeholder="ex. Raptor, Gr.3"')}
+          <label>Ambiance de la page<select name="theme">${options(THEMES_EV, e.theme || "")}</select></label>
+          ${champ("responsable", "Responsable", e.responsable)}
+          ${champ("lien", "Lien « Détails » (facultatif)", e.lien, "url", 'placeholder="https://…"')}
+          <label class="wide">Description<textarea name="description" rows="3">${esc(e.description || "")}</textarea></label>
+        </div>
+        <h3>Affiche ou photo</h3>
+        <div class="ev-image">
+          ${img ? `<img src="${esc(srcEvenement(img, 480))}" alt="Affiche actuelle">` : `<p class="muted">Aucune image : la page prend la photo GTQC par défaut et le tracé du circuit.</p>`}
+          <div class="adm-actions"><label class="btn ghost file">${img ? "Changer l'image…" : "Ajouter une image…"}<input type="file" id="evImage" accept="image/jpeg,image/png,image/webp" hidden></label>
+            ${img ? `<button type="button" class="lien" data-evsansimage>Retirer l'image</button>` : ""}<span class="muted" id="evImageEtat"></span></div>
+        </div>
+        <div class="adm-actions"><button class="btn" type="submit">Enregistrer</button><button class="btn ghost" type="button" data-evcancel>Annuler</button></div></form>` : ""}
+      <table class="adm-table"><thead><tr><th>Date</th><th>Titre</th><th>Circuit</th><th>Statut</th><th>Site</th><th></th></tr></thead><tbody>
+      ${evs.map(x => { const c = (D.Circuits_GT7 || []).find(g => g.layout_id === x.circuit_id) || (D.Circuits || []).find(g => g.circuit_id === x.circuit_id) || {};
+        return `<tr${e && e.evenement_id === x.evenement_id ? ' class="on"' : ""}><td class="nowrap">${esc(x.date)}${x.heure ? " · " + esc(x.heure) : ""}</td><td>${esc(x.titre)}</td><td>${esc(c.nom_officiel || c.nom || "")}</td>
+        <td>${esc((STATUTS_EV.find(s => s[0] === x.statut) || [, x.statut || ""])[1])}</td><td>${yes(x.publier) ? "Publié" : "Caché"}</td><td><button type="button" class="lien" data-evedit="${esc(x.evenement_id)}">Modifier</button></td></tr>`; }).join("") || `<tr><td colspan="6" class="muted">Aucun événement.</td></tr>`}</tbody></table>`;
+  }
+  // Met à jour l'aperçu sans redessiner le formulaire (les champs déjà tapés restent)
+  function apercuEvenement() {
+    const zone = document.querySelector(".ev-image"); if (!zone) return;
+    const vieux = zone.querySelector("img, p.muted"), src = srcEvenement(ui.evImage, 480);
+    const nouveau = src ? Object.assign(document.createElement("img"), { src, alt: "Affiche" }) : Object.assign(document.createElement("p"), { className: "muted", textContent: "Aucune image : la page prend la photo GTQC par défaut et le tracé du circuit." });
+    vieux ? vieux.replaceWith(nouveau) : zone.prepend(nouveau);
+  }
+  async function envoyerImageEvenement(fichier) {
+    if (!/^image\/(jpeg|png|webp)$/.test(fichier.type)) return toast("Choisis une image JPEG, PNG ou WebP.", "err");
+    const etat = $("evImageEtat"); etat.textContent = "Envoi…";
+    try {
+      const img = await reduire(fichier);
+      if (demo) { ui.evImage = img.apercu; apercuEvenement(); return toast("Mode démo : image affichée, rien n'est enregistré.", "warn"); }
+      const r = await envoyer("evenementImage", { data: img.data, mime: img.mime }, "Image", { recharger: false });
+      if (!r.ok) { etat.textContent = ""; return; }
+      ui.evImage = r.url; apercuEvenement(); etat.textContent = ""; toast("Image envoyée : clique Enregistrer pour l'associer à l'événement.", "ok");
+    } catch (err) { etat.textContent = ""; toast("Image illisible : " + err.message, "err"); }
+  }
   /* ---------- Résultats et pénalités ---------- */
   function vueResultats() {
     const m = D.Manches.find(x => x.course_id === ui.res) || prochaine();
@@ -720,7 +777,7 @@
   }
 
   const choixSaison = () => `<select id="saison">${options(D.Saisons.slice().sort((a, b) => b.saison_id.localeCompare(a.saison_id)).map(s => [s.saison_id, s.nom || s.saison_id]), saison)}</select>`;
-  const VUES = { manches: vueManches, resultats: vueResultats, grille: vueGrille, reserves: vueReserves, pilotes: vuePilotes, vods: vueVods, photos: vuePhotos, inscriptions: vueInscriptions, demandes: vueDemandes, journal: vueJournal, guide: vueGuide };
+  const VUES = { manches: vueManches, evenements: vueEvenements, resultats: vueResultats, grille: vueGrille, reserves: vueReserves, pilotes: vuePilotes, vods: vueVods, photos: vuePhotos, inscriptions: vueInscriptions, demandes: vueDemandes, journal: vueJournal, guide: vueGuide };
 
   function render() {
     document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === tab ? "page" : "false"));
@@ -746,6 +803,7 @@
     if (t.id === "phSource") { ui.phSource = t.value; return; }
     if (t.id === "phFichiers" && t.files.length) { envoyerPhotos(t.files); return; }
     if (t.id === "luFichiers" && t.files.length) { lireCaptures(t.files); return; }
+    if (t.id === "evImage" && t.files.length) { envoyerImageEvenement(t.files[0]); t.value = ""; return; }
     const ph = t.closest("[data-ph]");
     if (ph && t.dataset.k) { ui.phB.lignes[+ph.dataset.ph][t.dataset.k] = t.type === "checkbox" ? t.checked : t.value; return; }
     if (t.id === "fi") { ui.fi = t.value; return render(); }
@@ -796,6 +854,10 @@
     const d = t.dataset;
     if (d.guide) return $("g-" + d.guide).scrollIntoView({ behavior: "smooth" });
     if (d.aller) { tab = d.aller; history.replaceState(null, "", "#" + tab); scrollTo(0, 0); return render(); }
+    if ("evnew" in d) { ui.ev = "nouveau"; ui.evImage = undefined; return render(); }
+    if (d.evedit) { ui.ev = d.evedit; ui.evImage = undefined; render(); return $("fEvenement").scrollIntoView({ behavior: "smooth" }); }
+    if ("evcancel" in d) { ui.ev = null; ui.evImage = undefined; return render(); }
+    if ("evsansimage" in d) { ui.evImage = ""; return apercuEvenement(); }
     if ("new" in d) { ui.manche = "nouvelle"; return render(); }
     if (d.edit) { ui.manche = d.edit; render(); return $("fManche").scrollIntoView({ behavior: "smooth" }); }
     if ("cancel" in d) { ui.manche = null; return render(); }
@@ -953,6 +1015,13 @@
       if (!m.course_id && manches().some(x => Number(x.manche) === m.manche)) return toast(`La manche ${m.manche} existe déjà.`, "err");
       const categories = ["D1", "D2"].map(c => ({ categorie_id: c, heure_depart: v["heure_" + c], duree: v["duree_" + c], tours: v["tours_" + c] })).filter(c => c.heure_depart || c.duree || c.tours);
       envoyer("manche", { manche: m, categories }, `Manche ${m.manche}`).then(r => { if (r.ok && !r.demo) { ui.manche = null; render(); } });
+    }
+    if (f.id === "fEvenement") {
+      const ev = { ...v, publier: v.publier === "TRUE" };
+      if (!ev.evenement_id) delete ev.evenement_id;
+      const ex = (D.Evenements || []).find(x => x.evenement_id === v.evenement_id) || {};
+      ev.image = ui.evImage !== undefined ? ui.evImage : ex.image || "";
+      envoyer("evenement", { evenement: ev }, "Événement " + ev.titre).then(r => { if (r.ok && !r.demo) { ui.ev = null; ui.evImage = undefined; render(); } });
     }
     if (f.id === "fPilote") {
       const { role, lobby, classement, ...reste } = v;
