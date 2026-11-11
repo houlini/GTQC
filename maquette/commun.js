@@ -211,7 +211,7 @@ window.GT = (() => {
         bar.hidden = !(d.pendant_course && live.length);
         if (bar.hidden) return;
         const noms = live.slice(0, 3).map(c => esc(c.pseudo || c.chaine)).join(", ") + (live.length > 3 ? ` +${live.length - 3}` : "");
-        bar.innerHTML = `<span class="live-dot" aria-hidden="true"></span><b>En direct</b><span class="live-names">${noms}</span><span class="live-cta">Regarder sur GTQC TV ›</span>`;
+        bar.innerHTML = `<span class="live-dot" aria-hidden="true"></span><b>En direct</b><span class="live-names">${noms}</span><span class="live-cta">Regarder sur LIVE ›</span>`;
       } catch (err) { bar.hidden = true; }
     };
     refresh();

@@ -48,7 +48,7 @@ Site en **français seulement**, à l'adresse GitHub Pages gratuite. Liens : Fac
   (exécuté avec le compte propriétaire). Il publie les onglets publics, **sans les réglages des prochaines manches**
   (dévoilés `Config.reglages_jours_avant` jours avant, ou selon `Manches.reglages_visibles`). Les onglets `_…`
   (`_Inscriptions`, `_Admins`, `_Journal`) ne sont jamais publiés.
-- **API publique** : Worker Cloudflare `workers/api` (`api.gtqc.net`) : `/donnees`, `/twitch` (GTQC TV) et
+- **API publique** : Worker Cloudflare `workers/api` (`api.gtqc.net`) : `/donnees`, `/twitch` (LIVE) et
   `/inscription` (formulaire Rejoindre). Les clés Twitch et le code du script restent côté serveur.
 - **Admin** : Worker `workers/admin` (`admin.gtqc.net`), derrière **Cloudflare Access** (code par courriel). Seuls les
   courriels de `_Admins` peuvent écrire. Il gère les manches, les résultats (collés ou en fichier, points calculés avec

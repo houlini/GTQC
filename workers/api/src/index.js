@@ -1,6 +1,6 @@
 // GTQC — Worker de l'API publique du site (api.<domaine>) :
 //   GET  /donnees     onglets publics du classeur (via Apps Script, réglages des prochaines manches retirés)
-//   GET  /twitch      GTQC TV : chaînes des pilotes (Pilotes.twitch) et qui est en direct avec le tag GTQC
+//   GET  /twitch      LIVE : chaînes des pilotes (Pilotes.twitch) et qui est en direct avec le tag GTQC
 //   POST /inscription formulaire « Rejoindre » (relayé au script, piège à robots ici)
 // Les clés Twitch et le code du script restent ici (secrets). Réponses gardées 60 s / 30 s en cache.
 
@@ -68,7 +68,7 @@ async function donnees(env) {
   return r.ok ? json(r, 200, DUREE_DONNEES) : json({ ok: false, erreur: r.erreur || 'script' }, 502, 0);
 }
 
-/* ---------- GTQC TV ---------- */
+/* ---------- LIVE ---------- */
 async function twitch(env, ctx) {
   // Pilotes et calendrier : la copie de /donnees en cache suffit (60 s)
   const dRep = await enCache(ctx, 'donnees', DUREE_DONNEES, () => donnees(env));
@@ -99,7 +99,7 @@ async function twitch(env, ctx) {
       c.live = true;
       // Tag Twitch « GTQC » (le plus fiable), ou le mot GTQC dans le titre. La diffusion PlayStation n'a
       // pas de tags et efface le « # » ET le texte qui le suit : « #GTQC » dans le titre n'arrive jamais ici,
-      // d'où la consigne d'écrire GTQC sans # (page GTQC TV).
+      // d'où la consigne d'écrire GTQC sans # (page LIVE).
       c.gtqc = tags.includes(tag) || new RegExp('(^|[^a-z0-9])' + tag + '($|[^a-z0-9])', 'i').test(s.title || '');
       c.nom = s.user_name;
       c.titre = s.title;

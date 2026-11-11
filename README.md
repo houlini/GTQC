@@ -15,7 +15,7 @@ Site de la ligue de sim racing Gran Turismo 7 **GTQC** : calendrier, classement,
 | `maquette/` | Maquette HTML de la page Courses (style Red Bull Racing) |
 | `outils/` | Scripts Python : import, classement des photos, tracés, export des données |
 | `apps-script/` | `gtqc.gs` : seule porte d'entrée vers le Sheet privé (données publiques, admin, formulaire) |
-| `workers/api/` | Worker Cloudflare de l'API publique : `/donnees`, `/twitch` (GTQC TV), `/inscription` |
+| `workers/api/` | Worker Cloudflare de l'API publique : `/donnees`, `/twitch` (LIVE), `/inscription` |
 | `workers/admin/` | Worker de l'admin (derrière Cloudflare Access) et son interface (`public/`) |
 
 Ne jamais ajouter au dépôt les données personnelles des pilotes (noms réels, courriels, PSN) :

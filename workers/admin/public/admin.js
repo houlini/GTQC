@@ -432,7 +432,7 @@
     const ps = pilotes().filter(p => !q || norm(p.pseudo).includes(q) || norm(p.twitch).includes(q) || norm(p.psn).includes(q));
     const p = ui.pilote === "nouveau" ? {} : D.Pilotes.find(x => x.pilote_id === ui.pilote);
     return `<div class="adm-head"><h1>Pilotes <small>${D.Pilotes.length}</small></h1><div class="adm-actions"><input type="search" id="q" placeholder="Rechercher" value="${esc(ui.q || "")}"><button type="button" class="btn" data-pnew>+ Nouveau pilote</button></div></div>
-      <p class="muted">Cet onglet est publié : pseudo et PSN seulement, aucun nom réel ni courriel. Le PSN aide à reconnaître les captures de résultats ; la chaîne Twitch fait apparaître le pilote sur GTQC TV.</p>
+      <p class="muted">Cet onglet est publié : pseudo et PSN seulement, aucun nom réel ni courriel. Le PSN aide à reconnaître les captures de résultats ; la chaîne Twitch fait apparaître le pilote sur la page LIVE.</p>
       ${ui.pilote ? `<form class="adm-card" id="fPilote"><h2>${p.pilote_id ? "Modifier " + esc(p.pseudo) : "Nouveau pilote"}</h2><input type="hidden" name="pilote_id" value="${esc(p.pilote_id || "")}">
         <div class="adm-grid">${champ("pseudo", "Pseudo (Discord)", p.pseudo, "text", "required")}${champ("numero", "Numéro", p.numero, "number")}${champ("region", "Région", p.region)}
           <label>Contrôle<select name="controle">${options([["Volant", "Volant"], ["Manette", "Manette"]], p.controle, "?")}</select></label>${champ("driver_rating", "Driver Rating", p.driver_rating)}

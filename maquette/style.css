@@ -403,7 +403,7 @@ h2 { margin: 0; font-weight: 800; letter-spacing: -.01em; line-height: 1; text-w
 .res-title { display: grid; gap: 12px; }
 .res-title .sub { color: var(--muted); margin: 0; font-size: 14px; }
 
-/* ---------- GTQC TV (tv.html, tv.js), adapté de LNHQ TV */
+/* ---------- LIVE (tv.html, tv.js), adapté de LNHQ TV */
 .tv-page { padding: 110px calc(var(--gutter-r) + 48px) 40px calc(var(--gutter-l) + 48px); display: grid; gap: 22px; min-height: 70vh; }
 .tv-head { display: flex; justify-content: space-between; align-items: end; gap: 16px 24px; flex-wrap: wrap; }
 .tv-accent { color: var(--accent); }

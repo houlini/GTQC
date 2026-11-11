@@ -12,7 +12,7 @@ web
   réglages de la prochaine manche, leur lobby (D1 / D2) et leur classement, puis après pour les résultats.
   Beaucoup consultent sur téléphone.
 - **Aussi :** recrues potentielles (joueurs GT7 qui découvrent la ligue et veulent la rejoindre), spectateurs
-  (communauté qui suit les courses sur GTQC TV) et sponsors.
+  (communauté qui suit les courses sur LIVE) et sponsors.
 - **Admins** (liste dans l'onglet `_Admins`) : saisissent les résultats, créent les manches, génèrent la grille,
   gèrent réserves, VOD et inscriptions dans admin.gtqc.net.
 
@@ -37,7 +37,7 @@ Le site réussit quand :
 
 - Données : Google Sheet privé `GTQC_Base_Donnees`, publié par Apps Script puis l'API `api.gtqc.net`. Les
   onglets `_…` ne sont jamais publiés.
-- Soirées de course : 2 lobbys (D1, D2). GTQC TV affiche les streams Twitch des pilotes pendant les courses
+- Soirées de course : 2 lobbys (D1, D2). LIVE affiche les streams Twitch des pilotes pendant les courses
   (bandeau « en direct » sur tout le site).
 - Les réglages d'une manche restent cachés jusqu'à 7 jours avant (`Config.reglages_jours_avant`) ou selon
   `Manches.reglages_visibles`.
@@ -47,7 +47,7 @@ Le site réussit quand :
 
 ## Capabilities and Constraints
 
-- Pages publiques : Courses (accueil), Pilotes, Événements, Règlements, GTQC TV, Rejoindre (formulaire unique :
+- Pages publiques : Courses (accueil), Pilotes, Événements, Règlements, LIVE, Rejoindre (formulaire unique :
   ligue, réserve ou question).
 - Admin derrière Cloudflare Access : Manches, Résultats, Grille, Réserves, Pilotes, VOD, Captures, Inscriptions,
   Journal.

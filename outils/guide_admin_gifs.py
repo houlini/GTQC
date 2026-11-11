@@ -184,7 +184,7 @@ def pilotes(f):
     f.dire("Pilotes : la liste publique (pseudo et PSN seulement, aucun nom réel)")
     f.ecrire("#q", debut, "Recherche par pseudo, PSN ou chaîne Twitch")
     f.cliquer("[data-pedit]", "« Modifier » ouvre la fiche du pilote", apres=2200)
-    f.dire("Le PSN aide à reconnaître les captures, la chaîne Twitch l'affiche sur GTQC TV", 3200)
+    f.dire("Le PSN aide à reconnaître les captures, la chaîne Twitch l'affiche sur la page LIVE", 3200)
     f.page.locator("#fPilote select[name=role]").scroll_into_view_if_needed()
     f.dire("Rôle dans la saison (titulaire, réserve) et lobby du titulaire", 2600)
     f.cliquer("#fPilote button[type=submit]", "Enregistrer", apres=2800)

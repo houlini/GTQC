@@ -42,7 +42,7 @@
         ${prochain.description ? `<p class="ev-desc">${esc(prochain.description)}</p>` : ""}
         <div class="ev-count" id="evCount" aria-label="Compte à rebours"></div>
         <div class="ctas">${cal ? `<a class="pill-btn" href="${esc(cal)}" target="_blank" rel="noopener">Ajouter au calendrier</a>` : ""}
-          ${prochain.lien ? `<a class="pill-btn ghost" href="${esc(prochain.lien)}" target="_blank" rel="noopener">Détails</a>` : `<a class="pill-btn ghost" href="tv.html">Suivre sur GTQC TV</a>`}</div>
+          ${prochain.lien ? `<a class="pill-btn ghost" href="${esc(prochain.lien)}" target="_blank" rel="noopener">Détails</a>` : `<a class="pill-btn ghost" href="tv.html">Suivre sur LIVE</a>`}</div>
       </div>
       ${tr ? `<div class="ev-visual" aria-hidden="true"><div class="ev-plate"><img class="ev-trace" src="${tr}" alt="" onerror="this.closest('.ev-visual').remove()">
         ${c ? `<span>${esc(c.nom)}</span>` : ""}</div></div>` : ""}`;

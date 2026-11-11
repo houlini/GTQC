@@ -1,4 +1,4 @@
-/* GTQC TV — directs Twitch des pilotes (colonne Pilotes.twitch), comme LNHQ TV.
+/* LIVE — directs Twitch des pilotes (colonne Pilotes.twitch), comme LNHQ TV.
    Source : API /twitch (Worker gtqc-api, mise à jour chaque minute). Une chaîne compte « en direct »
    si elle diffuse avec le tag GTQC (ou GTQC dans le titre). 1, 2 ou 4 streams, plein écran, clavardage.
    Adresse : ?chaine=nom (1 stream) ou ?vue=2&chaines=a,b */
@@ -181,7 +181,7 @@
   async function load() {
     if (!G.API) {
       state.chaines = chainesDuClasseur();
-      note(state.chaines.length ? "Statut des directs bientôt disponible." : "GTQC TV arrive bientôt : les pilotes ajouteront leur chaîne Twitch à leur fiche, et leurs directs de soirs de course apparaîtront ici.");
+      note(state.chaines.length ? "Statut des directs bientôt disponible." : "La page LIVE arrive bientôt : les pilotes ajouteront leur chaîne Twitch à leur fiche, et leurs directs de soirs de course apparaîtront ici.");
       render();
       return;
     }

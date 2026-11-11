@@ -2,7 +2,7 @@ name = "gtqc-api"
 main = "src/index.js"
 compatibility_date = "2026-09-01"
 
-# API publique du site GTQC : données (/donnees), GTQC TV (/twitch), formulaire (/inscription).
+# API publique du site GTQC : données (/donnees), LIVE (/twitch), formulaire (/inscription).
 workers_dev = false
 preview_urls = false
 routes = [{ pattern = "api.gtqc.net", custom_domain = true }]
