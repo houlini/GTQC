@@ -456,7 +456,9 @@ function engagement(c) {
   const e = c.engagement || {};
   if (!e.saison_id || !e.pilote_id) return { ok: false, erreur: 'champs' };
   const propre = {};
-  ['saison_id', 'pilote_id', 'categorie_id', 'role', 'numero', 'equipe_id', 'ordre_reserve', 'note'].forEach(k => { if (k in e) propre[k] = e[k]; });
+  // classement : '' (visible, division du dernier lobby couru), 'D1' / 'D2' (division imposée au classement public) ou 'masque'
+  if ('classement' in e && !['', 'D1', 'D2', 'masque'].includes(e.classement)) return { ok: false, erreur: 'champs' };
+  ['saison_id', 'pilote_id', 'categorie_id', 'role', 'numero', 'equipe_id', 'ordre_reserve', 'note', 'classement'].forEach(k => { if (k in e) propre[k] = e[k]; });
   enregistrerLigne('Engagements', x => x.saison_id === e.saison_id && x.pilote_id === e.pilote_id, propre);
   return { ok: true, resume: `${e.saison_id} ${e.pilote_id} ${e.role || ''} ${e.categorie_id || ''}` };
 }

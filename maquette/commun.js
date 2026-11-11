@@ -111,7 +111,9 @@ window.GT = (() => {
   };
   const official = (s, type = "Pilote") => D.Classement_Final.filter(r => r.saison_id === s && r.type === type);
   /** Pilotes classés pour le graphique / les rangs : saison en cours = tous ; archives = rang officiel numérique (sans host ni réserves). */
-  const eligible = s => isCurrent(s) ? null : new Set(official(s).filter(r => /^\d+$/.test(String(r.rang))).map(r => r.id));
+  const eligible = s => isCurrent(s)
+    ? (D.Engagements.some(e => e.saison_id === s && e.classement === "masque") ? new Set(Object.keys(totals(pilotRounds(s))).filter(id => classementDe(id, s) !== "masque")) : null)
+    : new Set(official(s).filter(r => /^\d+$/.test(String(r.rang))).map(r => r.id));
   const lastLobby = (id, s) => {
     // Grille publiée par l'admin (aux 2 manches) : elle prime sur le lobby de la dernière course
     const g = D.Grilles.filter(x => x.saison_id === s && x.pilote_id === id).sort((a, b) => (b.a_partir_de || 0) - (a.a_partir_de || 0))[0];
@@ -124,8 +126,12 @@ window.GT = (() => {
     if (!isCurrent(s)) {
       return official(s, mode === "pilotes" ? "Pilote" : "Equipe").map(r => ({ id: r.id, rank: String(r.rang), pts: r.total_officiel, tag: r.role === "Réserve" ? "R" : "", note: r.note || "" }));
     }
-    return ranked(totals(pilotRounds(s))).map(r => ({ ...r, tag: lastLobby(r.id, s) }));
+    // Réglage de l'admin (Engagements.classement) : « masque » retire le pilote du classement public,
+    // « D1 » / « D2 » impose sa division ; sinon la division du dernier lobby couru
+    const tot = Object.fromEntries(Object.entries(totals(pilotRounds(s))).filter(([id]) => classementDe(id, s) !== "masque"));
+    return ranked(tot).map(r => ({ ...r, tag: /^D\d$/.test(classementDe(r.id, s)) ? classementDe(r.id, s) : lastLobby(r.id, s) }));
   }
+  const classementDe = (id, s) => (D.Engagements.find(e => e.saison_id === s && e.pilote_id === id) || {}).classement || "";
   /** Rang au classement après chaque manche comptée. */
   function positions(s) {
     const rs = pilotRounds(s), el = eligible(s), out = {};

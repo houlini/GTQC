@@ -13,6 +13,9 @@
     ["arret_pit_min", "Arrêts obligatoires"], ["conso_carburant", "Consommation"], ["usure_pneus", "Usure des pneus"],
     ["carburant_initial_l", "Carburant au départ (L)"], ["ravitaillement", "Ravitaillement"], ["temps_pit_s", "Temps au stand (s)"]];
   const STATUTS_RES = ["Classé", "DNF", "DNS", "DSQ"];
+  // Classement public (Engagements.classement) : visible dans la division du dernier lobby couru, division imposée, ou masqué
+  const CLASSEMENT = [["", "Auto"], ["D1", "Division 1"], ["D2", "Division 2"], ["masque", "Masqué"]];
+  const libClasse = v => (CLASSEMENT.find(c => c[0] === (v || "")) || CLASSEMENT[0])[1];
   const STATUTS_INSCR = ["Nouvelle", "Contactée", "Acceptée", "Réserve", "Refusée", "Archivée"];
 
   let D = null, demo = false, tab = "manches", saison = "";
@@ -409,11 +412,12 @@
     const pris = new Set(Object.values(a).map(x => x.remplacant_id).filter(Boolean));
     return `<div class="adm-head"><h1>Réserves <small>${esc(saison)}</small></h1><div class="adm-actions">${choixSaison()}</div></div>
       <div class="adm-cols reserves">
-        <div class="adm-card"><h2>Pilotes de réserve</h2><p class="muted">Ordre de priorité pour les remplacements (1 = appelé en premier).</p>
-          <table class="adm-table"><thead><tr><th>Ordre</th><th>Pilote</th><th class="num">Rempl.</th><th></th></tr></thead><tbody>
+        <div class="adm-card"><h2>Pilotes de réserve</h2><p class="muted">Ordre : priorité pour les remplacements (1 = appelé en premier). Classement public : « Auto » place le pilote dans la division du dernier lobby où il a couru ; « Masqué » le retire du classement du site.</p>
+          <table class="adm-table"><thead><tr><th>Ordre</th><th>Pilote</th><th class="num">Rempl.</th><th>Classement</th><th></th></tr></thead><tbody>
           ${rs.map(e => `<tr><td><input type="number" min="1" class="court" data-ordre="${esc(e.pilote_id)}" value="${esc(e.ordre_reserve ?? "")}"></td><td>${esc(pseudo(e.pilote_id))}</td>
             <td class="num">${D.Remplacements.filter(r => r.remplacant_id === e.pilote_id && String(r.course_id).startsWith(saison)).length}</td>
-            <td class="nowrap"><select data-promo="${esc(e.pilote_id)}"><option value="">Promouvoir…</option><option value="D1">Titulaire Lobby 1</option><option value="D2">Titulaire Lobby 2</option><option value="retirer">Retirer des réserves</option></select></td></tr>`).join("") || `<tr><td colspan="4" class="muted">Aucun pilote de réserve.</td></tr>`}</tbody></table>
+            <td><select data-classe="${esc(e.pilote_id)}" aria-label="Classement public de ${esc(pseudo(e.pilote_id))}">${options(CLASSEMENT, e.classement || "")}</select></td>
+            <td class="nowrap"><select data-promo="${esc(e.pilote_id)}"><option value="">Promouvoir…</option><option value="D1">Titulaire Lobby 1</option><option value="D2">Titulaire Lobby 2</option><option value="retirer">Retirer des réserves</option></select></td></tr>`).join("") || `<tr><td colspan="5" class="muted">Aucun pilote de réserve.</td></tr>`}</tbody></table>
           <div class="adm-actions"><select id="nouvRes">${optPilotes("", "Ajouter un pilote…", pilotes().filter(p => !engages.has(p.pilote_id) && !no(p.actif)))}</select><button type="button" class="btn ghost" id="ajRes">Ajouter</button><button type="button" class="btn" id="saveOrdre">Enregistrer l'ordre</button></div>
         </div>
         <div class="adm-card"><h2>Absences et remplaçants</h2>
@@ -423,7 +427,24 @@
               <td>${x ? `<select data-rempl="${esc(e.pilote_id)}">${options(rs.filter(r => r.pilote_id === x.remplacant_id || !pris.has(r.pilote_id)).map(r => [r.pilote_id, pseudo(r.pilote_id)]), x.remplacant_id, "À combler")}</select>` : ""}</td></tr>`; }).join("")}</tbody></table>`).join("")}
           <div class="adm-actions"><button type="button" class="btn" id="saveAbs">Enregistrer les absences</button></div>` : "<p>Aucune manche.</p>"}
         </div>
-      </div>`;
+      </div>
+      ${blocDefinitif(m)}`;
+  }
+  /** Départ d'un titulaire : un réserviste prend sa place pour le reste de la saison. */
+  function blocDefinitif(m) {
+    const partis = engagements().filter(e => e.role === "Retiré");
+    const suivantes = manches().filter(x => !m || x.manche >= m.manche);
+    return `<div class="adm-card"><h2>Remplacer définitivement</h2>
+      <p class="muted">Un titulaire quitte la ligue : le réserviste devient titulaire de son lobby à partir de la manche choisie et entre dans les révisions de grille. Les points déjà faits restent à chacun. Pour une absence d'un soir, utilise plutôt « Absences et remplaçants ».</p>
+      <div class="adm-grid">
+        <label>Pilote qui quitte<select id="defPart">${optPilotes(ui.defPart, "Choisir", titulaires().map(e => D.Pilotes.find(p => p.pilote_id === e.pilote_id)).filter(Boolean))}</select></label>
+        <label>Remplaçant (réserve)<select id="defRempl">${optPilotes(ui.defRempl, "Choisir", reserves().map(e => D.Pilotes.find(p => p.pilote_id === e.pilote_id)).filter(Boolean))}</select></label>
+        <label>À partir de la manche<select id="defManche">${options(suivantes.map(x => [x.manche, nomManche(x)]), ui.defManche || (m && m.manche))}</select></label>
+        <label class="check wide"><input type="checkbox" id="defGarder" checked> Garder le pilote qui quitte au classement public avec ses points</label>
+      </div>
+      <div class="adm-actions"><button type="button" class="btn" id="defOk">Remplacer définitivement</button></div>
+      ${partis.length ? `<h3>Pilotes partis cette saison</h3><p class="muted">${partis.map(e => `${esc(pseudo(e.pilote_id))}${e.note ? " (" + esc(e.note) + ")" : ""}${e.classement === "masque" ? " · masqué du classement" : ""}`).join(" · ")}</p>` : ""}
+    </div>`;
   }
 
   /* ---------- Pilotes ---------- */
@@ -439,12 +460,13 @@
           ${champ("psn", "PSN (plusieurs : séparer par /)", p.psn)}${champ("twitch", "Chaîne Twitch", p.twitch, "text", 'placeholder="nom ou twitch.tv/nom"')}${champ("avatar", "Avatar (fichier ajouté au site par le webmestre)", p.avatar, "text", 'placeholder="vide = casque GTQC"')}
           <label>Actif<select name="actif">${options([["TRUE", "Oui"], ["FALSE", "Non"]], no(p.actif) ? "FALSE" : "TRUE")}</select></label>
           ${(() => { const e = engagements().find(y => y.pilote_id === p.pilote_id) || {};
-            return `<label>Rôle en ${esc(saison)}<select name="role">${options([["Titulaire", "Titulaire"], ["Réserve", "Réserve"], ["Inactif", "Inactif"]], e.role, "Pas inscrit")}</select></label>
-            <label>Lobby (titulaire)<select name="lobby">${options([["D1", "Lobby 1"], ["D2", "Lobby 2"]], e.role === "Titulaire" ? lobbyDe(p.pilote_id) : "", "Choisir")}</select></label>`; })()}
+            return `<label>Rôle en ${esc(saison)}<select name="role">${options([["Titulaire", "Titulaire"], ["Réserve", "Réserve"], ["Retiré", "Parti en cours de saison"], ["Inactif", "Inactif"]], e.role, "Pas inscrit")}</select></label>
+            <label>Lobby (titulaire)<select name="lobby">${options([["D1", "Lobby 1"], ["D2", "Lobby 2"]], e.role === "Titulaire" ? lobbyDe(p.pilote_id) : "", "Choisir")}</select></label>
+            <label>Classement public<select name="classement">${options(CLASSEMENT, e.classement || "")}</select></label>`; })()}
           <label class="wide">Bio<textarea name="bio" rows="2">${esc(p.bio || "")}</textarea></label></div>
         <div class="adm-actions"><button class="btn" type="submit">Enregistrer</button><button class="btn ghost" type="button" data-pcancel>Annuler</button></div></form>` : ""}
       <table class="adm-table"><thead><tr><th>Pseudo</th><th>PSN</th><th>Lobby</th><th>Contrôle</th><th>DR</th><th>Twitch</th><th>Actif</th><th></th></tr></thead><tbody>
-      ${ps.map(x => { const e = engagements().find(y => y.pilote_id === x.pilote_id); return `<tr><td>${esc(x.pseudo)}</td><td>${esc(x.psn || "")}</td><td>${esc(e ? (e.role === "Réserve" ? "Réserve" : lobbyDe(x.pilote_id)) : "")}</td><td>${esc(x.controle || "")}</td><td>${esc(x.driver_rating || "")}</td>
+      ${ps.map(x => { const e = engagements().find(y => y.pilote_id === x.pilote_id); return `<tr><td>${esc(x.pseudo)}</td><td>${esc(x.psn || "")}</td><td>${esc(e ? (e.role === "Réserve" ? "Réserve" : e.role === "Retiré" ? "Parti" : lobbyDe(x.pilote_id)) : "")}</td><td>${esc(x.controle || "")}</td><td>${esc(x.driver_rating || "")}</td>
         <td>${x.twitch ? `<a href="https://www.twitch.tv/${esc(x.twitch)}" target="_blank" rel="noopener">${esc(x.twitch)}</a>` : ""}</td><td>${no(x.actif) ? "Non" : "Oui"}</td><td><button type="button" class="lien" data-pedit="${esc(x.pilote_id)}">Modifier</button></td></tr>`; }).join("")}</tbody></table>`;
   }
 
@@ -723,6 +745,10 @@
       if (t.checked) ui.absBrouillon.lignes[t.dataset.absent] = { remplacant_id: "", note: "", categorie_id: t.dataset.cat }; else delete ui.absBrouillon.lignes[t.dataset.absent];
       return render();
     }
+    if (t.dataset.classe) { const id = t.dataset.classe; return envoyer("engagement", { engagement: { saison_id: saison, pilote_id: id, classement: t.value } }, `${pseudo(id)} : classement ${libClasse(t.value)}`); }
+    if (t.id === "defPart") { ui.defPart = t.value; return; }
+    if (t.id === "defRempl") { ui.defRempl = t.value; return; }
+    if (t.id === "defManche") { ui.defManche = t.value; return; }
     if (t.dataset.rempl) { ui.absBrouillon.lignes[t.dataset.rempl].remplacant_id = t.value; return render(); }
     if (t.dataset.promo && t.value) {
       const id = t.dataset.promo, v = t.value;
@@ -828,6 +854,16 @@
       Object.values(a).forEach(x => { if (!x.remplacant_id && libres.length) x.remplacant_id = libres.shift(); });
       return render();
     }
+    if (t.id === "defOk") {
+      const part = $("defPart").value, rempl = $("defRempl").value, num = Number($("defManche").value);
+      if (!part || !rempl || !num) return toast("Choisis le pilote qui quitte, son remplaçant et la manche.", "err");
+      const lobby = lobbyDe(part, num) || lobbyDe(part), garder = $("defGarder").checked;
+      if (!confirm(`${pseudo(rempl)} devient titulaire du Lobby ${lobby.slice(1)} à partir de la manche ${num}, à la place de ${pseudo(part)}${garder ? "" : " (masqué du classement)"} ?`)) return;
+      const r1 = await envoyer("engagement", { engagement: { saison_id: saison, pilote_id: rempl, role: "Titulaire", categorie_id: lobby, ordre_reserve: "", classement: "", note: `Remplace ${pseudo(part)} dès M${num}` } }, `${pseudo(rempl)} titulaire`, { recharger: false });
+      if (!r1.ok) return;
+      ui.defPart = ui.defRempl = ui.defManche = "";
+      return envoyer("engagement", { engagement: { saison_id: saison, pilote_id: part, role: "Retiré", classement: garder ? "" : "masque", note: `Remplacé par ${pseudo(rempl)} dès M${num}` } }, `${pseudo(part)} remplacé par ${pseudo(rempl)}`);
+    }
     if (t.id === "saveAbs") {
       const lignes = Object.entries(ui.absBrouillon.lignes).map(([absent_id, x]) => ({ absent_id, remplacant_id: x.remplacant_id, categorie_id: x.categorie_id || lobbyDe(absent_id, numDe(ui.abs)), note: x.note }));
       return envoyer("remplacements", { course_id: ui.abs, lignes }, `Absences ${ui.abs}`);
@@ -889,7 +925,7 @@
       envoyer("manche", { manche: m, categories }, `Manche ${m.manche}`).then(r => { if (r.ok && !r.demo) { ui.manche = null; render(); } });
     }
     if (f.id === "fPilote") {
-      const { role, lobby, ...reste } = v;
+      const { role, lobby, classement, ...reste } = v;
       const p = { ...reste, actif: v.actif === "TRUE" };
       if (!p.pilote_id) {
         delete p.pilote_id;
@@ -902,14 +938,19 @@
       (async () => {
         const avant = p.pilote_id && engagements().find(y => y.pilote_id === p.pilote_id) || {};
         const changeRole = role && (role !== avant.role || (role === "Titulaire" && lobby !== lobbyDe(p.pilote_id)));
-        const r = await envoyer("pilote", { pilote: p }, "Pilote " + p.pseudo, { recharger: !changeRole });
+        // Classement public : seulement pour un pilote inscrit à la saison (engagement existant ou rôle choisi)
+        const changeClasse = (classement || "") !== (avant.classement || "") && (avant.role || role);
+        const r = await envoyer("pilote", { pilote: p }, "Pilote " + p.pseudo, { recharger: !changeRole && !changeClasse });
         if (!r.ok || r.demo) return;
-        if (changeRole) {
+        if (changeRole || changeClasse) {
           const id = p.pilote_id || r.pilote.pilote_id;
-          const e = role === "Titulaire" ? { role, categorie_id: lobby, ordre_reserve: "" }
+          // Seuls les champs qui changent : un changement de classement seul ne touche pas au rôle
+          const e = !changeRole ? {}
+            : role === "Titulaire" ? { role, categorie_id: lobby, ordre_reserve: "" }
             : role === "Réserve" ? { role, categorie_id: "", ordre_reserve: avant.role === "Réserve" ? avant.ordre_reserve : reserves().length + 1 }
             : { role, ordre_reserve: "" };
-          await envoyer("engagement", { engagement: { saison_id: saison, pilote_id: id, ...e } }, `${p.pseudo} : ${role}${role === "Titulaire" ? " Lobby " + lobby.slice(1) : ""}`);
+          if (changeClasse) e.classement = classement || "";
+          await envoyer("engagement", { engagement: { saison_id: saison, pilote_id: id, ...e } }, `${p.pseudo} : ${changeRole ? role + (role === "Titulaire" ? " Lobby " + lobby.slice(1) : "") : "classement " + libClasse(classement)}`);
         }
         ui.pilote = null; render();
       })();
