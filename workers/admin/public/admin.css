@@ -123,3 +123,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .dem .captures img { max-width: min(100%, 520px); border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; }
 .dem-tete { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .dem .adm-actions input { flex: 1 1 260px; width: auto; }
+/* Demandes : conversation */
+.fil { display: grid; gap: 10px; }
+.msg { max-width: 760px; padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid var(--line); }
+.msg.moi { justify-self: end; background: rgba(230,255,0,.07); border-color: rgba(230,255,0,.25); }
+.msg-qui { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.msg-qui span { font-weight: 500; color: var(--muted); margin-left: 6px; }
+.msg .texte { margin: 0 0 6px; }
+.msg .texte:last-child { margin: 0; }
+.msg-statut { margin: 0; text-align: center; font-size: 13px; color: var(--muted); }
+.dem-repondre { display: flex; gap: 10px; align-items: flex-end; }
+.dem-repondre textarea { flex: 1; resize: vertical; min-height: 44px; }
+.dem-statut { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid var(--line); }

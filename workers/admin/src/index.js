@@ -21,6 +21,7 @@ const ACTIONS = {
   // Même nom que l'action : l'admin envoie à /api/<action>
   'POST /api/demandeStatut': 'demandeStatut',
   'POST /api/demandeCapture': 'demandeCapture',
+  'POST /api/demandeMessage': 'demandeMessage',
   'POST /api/demande/voir': 'demandeVoir',
 };
 const MAX_OCTETS = 200 * 1024;

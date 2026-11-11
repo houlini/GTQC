@@ -37,7 +37,7 @@
       await new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "../../../maquette/data.js"; s.onload = ok; s.onerror = ko; document.head.append(s); });
       D = window.GTQC; demo = true; $("demo").hidden = false; $("moi").textContent = "démo"; ui.moi = { courriel: "démo", responsable: true };
     }
-    for (const k of ["Vods", "Photos", "_PSN", "Grilles", "Remplacements", "_Inscriptions", "_Journal", "_Demandes", "Engagements", "Penalites", "Manches_Categories"]) D[k] = D[k] || [];
+    for (const k of ["Vods", "Photos", "_PSN", "Grilles", "Remplacements", "_Inscriptions", "_Journal", "_Demandes", "_Demandes_Messages", "Engagements", "Penalites", "Manches_Categories"]) D[k] = D[k] || [];
     saison = saison || cfg().saison_courante || "S02";
     return true;
   }
@@ -574,27 +574,50 @@
   /* ---------- Demandes des admins (onglet privé _Demandes) ---------- */
   const STATUTS_DEM = ["Nouvelle", "Acceptée", "Refusée", "Faite"];
   const nomOnglet = id => (document.querySelector(`#tabs [data-tab="${id}"]`) || {}).firstChild?.textContent?.trim() || id || "";
+  const nomAdmin = c => ((D._Admins || []).find(a => String(a.courriel).toLowerCase() === String(c || "").toLowerCase()) || {}).nom || String(c || "").split("@")[0];
+  /** Conversation d'une demande : le texte d'origine, l'ancienne réponse (avant les messages) puis les messages et changements de statut. */
+  function filDe(x) {
+    const msgs = D._Demandes_Messages.filter(m => String(m.demande_id) === String(x.id)).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    if (x.reponse && !msgs.some(m => m.genre !== "statut")) msgs.unshift({ courriel: x.traite_par, date: x.traite_le, texte: x.reponse, genre: "message" });
+    return msgs;
+  }
   function vueDemandes() {
-    const resp = !!(ui.moi && ui.moi.responsable), vue = ui.fd || "ouvertes";
+    const resp = !!(ui.moi && ui.moi.responsable), moi = String((ui.moi || {}).courriel || "").toLowerCase(), vue = ui.fd || "ouvertes";
     const ouverte = x => !x.statut || x.statut === "Nouvelle" || x.statut === "Acceptée";
     const toutes = D._Demandes.slice().sort((a, b) => String(b.recu_le).localeCompare(String(a.recu_le)));
     const nO = toutes.filter(ouverte).length;
     const liste = vue === "ouvertes" ? toutes.filter(ouverte) : vue === "fermees" ? toutes.filter(x => !ouverte(x)) : toutes;
-    // Le responsable répond d'un clic : les boutons proposés dépendent du statut actuel
+    // Statut (responsable seulement) : les choix proposés dépendent du statut actuel
     const actions = s => s === "Acceptée" ? [["Faite", "Marquer faite"], ["Refusée", "Refuser"]] : s === "Refusée" || s === "Faite" ? [["Nouvelle", "Rouvrir"]] : [["Acceptée", "Accepter"], ["Refusée", "Refuser"]];
+    const bulle = (qui, quand, html) => `<div class="msg${String(qui || "").toLowerCase() === moi ? " moi" : ""}"><div class="msg-qui">${esc(nomAdmin(qui))} <span>${esc(quand || "")}</span></div>${html}</div>`;
+    ui.dmsg = ui.dmsg || {};
     return `<div class="adm-head"><h1>Demandes</h1>
         <div class="seg">${[["ouvertes", `À traiter (${nO})`], ["fermees", `Traitées (${toutes.length - nO})`], ["toutes", "Toutes"]].map(([k, l]) => `<button type="button" data-fd="${k}" aria-pressed="${vue === k}">${l}</button>`).join("")}</div></div>
-      <p class="muted">${resp ? "Accepte, refuse ou marque comme faite. Ta réponse est visible par les admins." : "Le responsable répond à chaque demande ici."} Nouvelle demande : bouton « Signaler » en haut.</p>
-      ${liste.map(x => { const s = x.statut || "Nouvelle", n = x.apercus ? x.apercus.length : String(x.captures || "").split(",").filter(Boolean).length;
+      <p class="muted">Chaque demande est une conversation : tous les admins peuvent répondre.${resp ? " Toi seul changes le statut." : ""} Nouvelle demande : bouton « Signaler » en haut.</p>
+      ${liste.map(x => { const s = x.statut || "Nouvelle", n = x.apercus ? x.apercus.length : String(x.captures || "").split(",").filter(Boolean).length, fil = filDe(x);
+        const nbMsg = fil.filter(m => m.genre !== "statut").length;
         return `<article class="adm-card dem" data-dem="${esc(x.id)}">
-        <div class="dem-tete"><span class="tag ${esc(s)}">${esc(s)}</span><b>${esc(x.type || "Demande")}</b><span class="muted">${esc(nomOnglet(x.onglet))} · ${esc(x.recu_le)} · ${esc(String(x.courriel || "").split("@")[0])}</span></div>
-        <p class="texte">${esc(x.texte)}</p>
-        ${n ? `<div><button type="button" class="btn ghost petit" data-dvoir>Voir ${n > 1 ? "les " + n + " captures" : "la capture"}</button></div>` : ""}
-        ${x.reponse ? `<p class="reponse">${esc(x.reponse)}${x.traite_par ? ` <span class="muted">· ${esc(String(x.traite_par).split("@")[0])}, ${esc(x.traite_le || "")}</span>` : ""}</p>` : ""}
-        ${resp ? `<div class="adm-actions"><input data-dreponse value="${esc(x.reponse || "")}" placeholder="Réponse (facultatif)">${actions(s).map(([v, l], i) => `<button type="button" class="btn${i ? " ghost" : ""}" data-dstat="${v}">${l}</button>`).join("")}</div>` : ""}
+        <div class="dem-tete"><span class="tag ${esc(s)}">${esc(s)}</span><b>${esc(x.type || "Demande")}</b><span class="muted">${esc(nomOnglet(x.onglet))}${nbMsg ? ` · ${nbMsg} réponse${nbMsg > 1 ? "s" : ""}` : ""}</span></div>
+        <div class="fil">
+          ${bulle(x.courriel, x.recu_le, `<p class="texte">${esc(x.texte)}</p>${n ? `<button type="button" class="btn ghost petit" data-dvoir>Voir ${n > 1 ? "les " + n + " captures" : "la capture"}</button>` : ""}`)}
+          ${fil.map(m => m.genre === "statut"
+            ? `<p class="msg-statut">${esc(nomAdmin(m.courriel))} a passé la demande à <b>${esc(m.texte)}</b> · ${esc(m.date || "")}</p>`
+            : bulle(m.courriel, m.date, `<p class="texte">${esc(m.texte)}</p>`)).join("")}
+        </div>
+        <div class="dem-repondre"><textarea data-dmsg rows="2" maxlength="2000" placeholder="Répondre… (Ctrl+Entrée pour envoyer)">${esc(ui.dmsg[x.id] || "")}</textarea><button type="button" class="btn" data-denvoyer>Envoyer</button></div>
+        ${resp ? `<div class="dem-statut"><span class="muted">Statut :</span>${actions(s).map(([v, l]) => `<button type="button" class="btn ghost petit" data-dstat="${v}">${l}</button>`).join("")}</div>` : ""}
       </article>`; }).join("") || `<p class="muted">${vue === "ouvertes" ? "Rien à traiter." : "Aucune demande."}</p>`}`;
   }
-  // Captures jointes à la demande : réduites à 1920 px dans le navigateur, 5 au plus
+  async function envoyerMessage(carte) {
+    const id = carte.dataset.dem, zone = carte.querySelector("[data-dmsg]"), texte = zone.value.trim();
+    if (!texte) return zone.focus();
+    if (demo) {
+      D._Demandes_Messages.push({ id: "demo-" + Date.now(), demande_id: id, date: new Date().toISOString().slice(0, 16).replace("T", " "), courriel: ui.moi.courriel, genre: "message", texte });
+      delete ui.dmsg[id]; toast("Mode démo : réponse non enregistrée.", "warn"); return render();
+    }
+    const r = await envoyer("demandeMessage", { id, texte }, "Réponse");
+    if (r.ok) { delete ui.dmsg[id]; render(); }
+  }  // Captures jointes à la demande : réduites à 1920 px dans le navigateur, 5 au plus
   let sigImages = [];
   const MAX_SIG = 5;
   function apercusSignaler() {
@@ -757,7 +780,12 @@
       else t.value = "";
     }
   });
+  // Réponse en cours gardée par demande (un enregistrement ailleurs redessine la page) ; Ctrl+Entrée envoie
+  main.addEventListener("keydown", e => {
+    if (e.target.dataset && "dmsg" in e.target.dataset && e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); envoyerMessage(e.target.closest("[data-dem]")); }
+  });
   main.addEventListener("input", e => {
+    if (e.target.dataset && "dmsg" in e.target.dataset) { ui.dmsg[e.target.closest("[data-dem]").dataset.dem] = e.target.value; return; }
     if (e.target.id === "q") { ui.q = e.target.value; ui.focusQ = true; render(); }
     const ligne = e.target.closest("tr[data-i]");
     if (ligne && e.target.dataset.k === "note") { ui.brouillon.lignes[+ligne.dataset.i].note = e.target.value; ui.brouillon.modifie = true; }
@@ -888,9 +916,11 @@
     if ("dvoir" in d) return voirCapturesDemande(t);
     if (d.fd) { ui.fd = d.fd; return render(); }
     if (d.dstat) {
-      const c = t.closest("[data-dem]");
-      return envoyer("demandeStatut", { id: c.dataset.dem, statut: d.dstat, reponse: c.querySelector("[data-dreponse]").value }, `Demande ${d.dstat === "Nouvelle" ? "rouverte" : d.dstat.toLowerCase()}`);
+      const c = t.closest("[data-dem]"), x = D._Demandes.find(y => String(y.id) === c.dataset.dem);
+      if (demo) { x.statut = d.dstat; D._Demandes_Messages.push({ demande_id: x.id, date: new Date().toISOString().slice(0, 16).replace("T", " "), courriel: ui.moi.courriel, genre: "statut", texte: d.dstat }); toast("Mode démo : statut non enregistré.", "warn"); return render(); }
+      return envoyer("demandeStatut", { id: x.id, statut: d.dstat }, `Demande ${d.dstat === "Nouvelle" ? "rouverte" : d.dstat.toLowerCase()}`);
     }
+    if ("denvoyer" in d) return envoyerMessage(t.closest("[data-dem]"));
     const carte = t.closest(".inscr");
     if (carte) {
       const x = D._Inscriptions.find(i => String(i.id) === carte.dataset.id);

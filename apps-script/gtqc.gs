@@ -8,7 +8,7 @@
      inscrire  → formulaire « Rejoindre » (onglet privé _Inscriptions)
    Actions admin (Worker gtqc-admin, derrière Cloudflare Access ; courriel dans _Admins) :
      etat, manche, resultats, penalites, vods, photo, photos, psn, pilote, engagement, grille,
-     remplacements, inscription, demande, demandeStatut, demandeCapture, demandeVoir (onglet privé _Demandes)
+     remplacements, inscription, demande, demandeStatut, demandeCapture, demandeVoir, demandeMessage (onglets privés _Demandes et _Demandes_Messages)
 
    Onglets dont le nom commence par « _ » : jamais publiés.
    Propriétés du script (Paramètres du projet → Propriétés du script) :
@@ -46,7 +46,7 @@ function router(e, corps) {
 
     const admin = adminDe(p.courriel);
     if (!admin) return { ok: false, erreur: 'admin' };
-    const actions = { etat, manche, resultats, penalites, vods, photo, photos, capture, psn, pilote, engagement, grille, remplacements, inscription, demande, demandeStatut, demandeCapture, demandeVoir };
+    const actions = { etat, manche, resultats, penalites, vods, photo, photos, capture, psn, pilote, engagement, grille, remplacements, inscription, demande, demandeStatut, demandeCapture, demandeVoir, demandeMessage };
     const f = actions[p.action];
     if (!f) return { ok: false, erreur: 'action' };
     if (f === etat) return etat(admin);
@@ -548,7 +548,28 @@ function demandeStatut(c, admin) {
   const maj = { id: c.id, statut: c.statut, traite_le: Utilities.formatDate(new Date(), FUSEAU, 'yyyy-MM-dd HH:mm'), traite_par: admin.courriel };
   if ('reponse' in c) maj.reponse = String(c.reponse || '').slice(0, 1000);
   enregistrerLigne('_Demandes', x => String(x.id) === String(c.id), maj);
+  // Le changement de statut apparaît aussi dans la conversation de la demande
+  ajouterMessage(c.id, admin, c.statut, 'statut');
   return { ok: true, resume: `${c.id} ${c.statut}` };
+}
+
+/* Conversation d'une demande : un message par ligne dans l'onglet privé _Demandes_Messages (tous les admins peuvent répondre). */
+function ajouterMessage(demandeId, admin, texte, genre) {
+  const ss = classeur();
+  if (!ss.getSheetByName('_Demandes_Messages')) ss.insertSheet('_Demandes_Messages').appendRow(['id', 'demande_id', 'date', 'courriel', 'genre', 'texte']);
+  const id = Utilities.getUuid().slice(0, 8);
+  enregistrerLigne('_Demandes_Messages', () => false, {
+    id, demande_id: String(demandeId), date: Utilities.formatDate(new Date(), FUSEAU, 'yyyy-MM-dd HH:mm'),
+    courriel: admin.courriel, genre: genre || 'message', texte: String(texte || '').slice(0, 2000),
+  });
+  return id;
+}
+function demandeMessage(c, admin) {
+  const texte = String(c.texte || '').trim();
+  if (!c.id || !texte) return { ok: false, erreur: 'champs' };
+  if (!lire('_Demandes').lignes.some(x => String(x.id) === String(c.id))) return { ok: false, erreur: 'introuvable' };
+  const id = ajouterMessage(c.id, admin, texte, 'message');
+  return { ok: true, id, resume: `${c.id} : message` };
 }
 
 function inscription(c) {
