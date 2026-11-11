@@ -27,8 +27,8 @@
   const depuisApi = async () => {
     if (!API) throw new Error("pas d'API");
     const ctrl = new AbortController();
-    // L'API répond en ~0,1 à 0,3 s (cache du Worker) ; au-delà de 3 s, on passe à data.js
-    const minuteur = setTimeout(() => ctrl.abort(), 3000);
+    // L'API répond en ~0,1 à 0,3 s (cache du Worker) ; jusqu'à quelques secondes si le cache de la région est vide (le Worker redemande au classeur) ; au-delà de 6 s, on passe à data.js
+    const minuteur = setTimeout(() => ctrl.abort(), 6000);
     try {
       const rep = await fetch(API + "/donnees", { signal: ctrl.signal });
       const d = await rep.json();
